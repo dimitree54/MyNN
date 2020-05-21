@@ -10,7 +10,7 @@ class ConvBn(Sequential):
         super().__init__([
             Conv2D(filters, kernel_size, stride, use_bias=False),
             BatchNormalization()
-        ])
+        ], **kwargs)
 
 
 class InitialBlock(Sequential):
@@ -96,31 +96,58 @@ class ClassificationHead(Sequential):
         ])
 
 
-class ResNet(Model):
+class ResNetBackbone(Model):
     down_stride = 2
 
     def __init__(self, nf, num_repeats: List[int],
                  return_endpoints_on_call=False,
                  init_block=InitialBlock,
                  main_block=ResNetIdentityMappingBlock,
-                 down_block=ResNetDownBlock,
-                 classification_head=ClassificationHead, *args, **kwargs):
+                 down_block=ResNetDownBlock, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.return_endpoints_on_call = return_endpoints_on_call
 
-        self.init_block = init_block(nf)
-        self.blocks = []
-
         filters = nf * 4
         bottleneck_filters = nf
+        self.blocks = [
+            [
+                init_block(bottleneck_filters),
+                down_block(bottleneck_filters, filters, 1)
+                # TODO we use this block to change num filters before ResNet. Is it correct?
+            ]
+        ]
 
-        self.blocks.append(down_block(bottleneck_filters, filters, 1))
-        # TODO we use this block to change num filters before ResNet. Is it correct?
         for n in num_repeats:
+            block = []
             for _ in range(n):
-                self.blocks.append(main_block(bottleneck_filters))
+                block.append(main_block(bottleneck_filters))
+
             filters *= 2
             bottleneck_filters *= 2
-            self.blocks.append(down_block(bottleneck_filters, filters, self.down_stride))
 
-        classification_block = classification_head()
+            block.append(down_block(bottleneck_filters, filters, self.down_stride))
+            self.blocks.append(block)
+
+    def call(self, inputs, training=None, mask=None):
+        endpoints = []
+        x = inputs
+        for block in self.blocks:
+            for layer in block:
+                x = layer(x, training, mask)
+            endpoints.append(x)
+        if self.return_endpoints_on_call:
+            return endpoints
+        else:
+            return endpoints[-1]
+
+
+def get_resnet50_backbone(nf):
+    return ResNetBackbone(nf, [2, 4, 6, 2])
+
+
+def get_resnet101_backbone(nf):
+    return ResNetBackbone(nf, [2, 4, 23, 2])
+
+
+def get_resnet152_backbone(nf):
+    return ResNetBackbone(nf, [2, 8, 36, 2])

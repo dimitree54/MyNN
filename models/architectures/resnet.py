@@ -59,17 +59,17 @@ class ResNetIdentityMappingBlock(Model):
 class ResNetDownBlock(Model):
     kernel_size = 3
 
-    def __init__(self, bottleneck_depth, final_depth, stride, conv_block=ConvBn, activation_block=ReLU):
+    def __init__(self, bottleneck_filters, final_filters, stride, conv_block=ConvBn, activation_block=ReLU):
         super().__init__()
         self.conv_block = conv_block
         # TODO do we need projection for stride=1? Also I do not like 1x1 convolution with stride 2.
-        self.conv1 = conv_block(bottleneck_depth, 1, stride)
+        self.conv1 = conv_block(bottleneck_filters, 1, stride)
         self.conv1_activation = activation_block()
         self.conv2 = None
         self.conv2_activation = activation_block()
-        self.conv3 = conv_block(final_depth, 1, 1)
+        self.conv3 = conv_block(final_filters, 1, 1)
 
-        self.projection = conv_block(final_depth, 1, stride)
+        self.projection = conv_block(final_filters, 1, stride)
         self.sum_block = tf.keras.layers.Add()
         self.sum_activation = activation_block()
 
@@ -88,9 +88,39 @@ class ResNetDownBlock(Model):
         return x
 
 
-class ResNet:
-    def __init__(self, num_repeats: List[int],
+class ClassificationHead(Sequential):
+    def __init__(self, num_classes):
+        super().__init__([
+            tf.keras.layers.GlobalAveragePooling2D(),
+            tf.keras.layers.Dense(num_classes)
+        ])
+
+
+class ResNet(Model):
+    down_stride = 2
+
+    def __init__(self, nf, num_repeats: List[int],
+                 return_endpoints_on_call=False,
                  init_block=InitialBlock,
                  main_block=ResNetIdentityMappingBlock,
-                 down_block=ResNetDownBlock):
-        pass
+                 down_block=ResNetDownBlock,
+                 classification_head=ClassificationHead, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.return_endpoints_on_call = return_endpoints_on_call
+
+        self.init_block = init_block(nf)
+        self.blocks = []
+
+        filters = nf * 4
+        bottleneck_filters = nf
+
+        self.blocks.append(down_block(bottleneck_filters, filters, 1))
+        # TODO we use this block to change num filters before ResNet. Is it correct?
+        for n in num_repeats:
+            for _ in range(n):
+                self.blocks.append(main_block(bottleneck_filters))
+            filters *= 2
+            bottleneck_filters *= 2
+            self.blocks.append(down_block(bottleneck_filters, filters, self.down_stride))
+
+        classification_block = classification_head()

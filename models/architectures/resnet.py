@@ -1,8 +1,10 @@
 from typing import List
 
 import tensorflow as tf
-from tensorflow.keras.layers import Conv2D, BatchNormalization, MaxPool2D, ReLU
+from tensorflow.keras.layers import Conv2D, BatchNormalization, MaxPool2D
 from tensorflow.keras import Sequential, Model
+
+from models.activations import ReLU
 
 
 class ConvBn(Sequential):

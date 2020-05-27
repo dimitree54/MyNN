@@ -19,7 +19,7 @@ def format_example(sample):
     image = tf.cast(image, tf.float32)
     image = (image / 127.5) - 1
     image = tf.image.random_crop(image, (IMG_SIZE, IMG_SIZE, 3))
-    # image = tf.image.resize(image, (IMG_SIZE, IMG_SIZE))
+    image = tf.image.resize(image, (224, 224))
     return image, label
 
 

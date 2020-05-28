@@ -21,7 +21,7 @@ class InitialBlock(Sequential):
     stride = 2
 
     def __init__(self, filters,
-                 conv_block:Model=ConvBn, activation_block:Model=ReLU, pool_block:Model=MaxPool2D, **kwargs):
+                 conv_block: Model = ConvBn, activation_block: Model = ReLU, pool_block: Model = MaxPool2D, **kwargs):
         super().__init__([
             conv_block(filters, self.kernel_size, self.stride),
             activation_block(),
@@ -32,20 +32,24 @@ class InitialBlock(Sequential):
 class ResNetBottleneckBlock(Model):
     kernel_size = 3
 
-    def __init__(self, bottleneck_filters, conv_block:Model=ConvBn, activation_block:Model=ReLU, **kwargs):
+    def __init__(self, conv_block: Model = ConvBn, activation_block: Model = ReLU, **kwargs):
         super().__init__(**kwargs)
         self.conv_block = conv_block
 
-        self.conv1 = conv_block(bottleneck_filters, 1, 1)
+        self.conv1 = None
         self.conv1_activation = activation_block()
-        self.conv2 = conv_block(bottleneck_filters, self.kernel_size, 1)
+        self.conv2 = None
         self.conv2_activation = activation_block()
         self.conv3 = None
         self.sum_block = tf.keras.layers.Add()
         self.sum_activation = activation_block()
 
     def build(self, input_shape):
-        self.conv3 = self.conv_block(input_shape[-1], 1, 1)
+        input_filters = input_shape[-1]
+        bottleneck_filters = input_filters // 4
+        self.conv1 = self.conv_block(bottleneck_filters, 1, 1)
+        self.conv2 = self.conv_block(bottleneck_filters, self.kernel_size, 1)
+        self.conv3 = self.conv_block(input_filters, 1, 1)
 
     def call(self, inputs, **kwargs):
         x = inputs
@@ -60,7 +64,7 @@ class ResNetBottleneckBlock(Model):
 
 
 class ResNetIdentityBlock(Model):
-    def __init__(self, conv_block:Model=ConvBn, activation_block:Model=ReLU, **kwargs):
+    def __init__(self, conv_block: Model = ConvBn, activation_block: Model = ReLU, **kwargs):
         super().__init__(**kwargs)
         self.conv_block = conv_block
 
@@ -87,12 +91,12 @@ class ResNetIdentityBlock(Model):
 class ResNetDownBlock(Model):
     kernel_size = 3
 
-    def __init__(self, bottleneck_filters, final_filters, stride,
-                 conv_block:Model=ConvBn, activation_block:Model=ReLU, **kwargs):
+    def __init__(self, final_filters, stride,
+                 conv_block: Model = ConvBn, activation_block: Model = ReLU, **kwargs):
         super().__init__(**kwargs)
         self.conv_block = conv_block
-        # TODO probably using kerhel 1 with stride 2 is not good, but so made in paper
-        self.conv1 = conv_block(bottleneck_filters, 1, stride)
+        self.stride = stride
+        self.conv1 = None
         self.conv1_activation = activation_block()
         self.conv2 = None
         self.conv2_activation = activation_block()
@@ -103,7 +107,11 @@ class ResNetDownBlock(Model):
         self.sum_activation = activation_block()
 
     def build(self, input_shape):
-        self.conv2 = self.conv_block(input_shape[-1], self.kernel_size, 1)
+        input_filters = input_shape[-1]
+        bottleneck_filters = input_filters // 4
+        # TODO probably using kernel 1 with stride 2 is not good, but so was in paper
+        self.conv1 = self.conv_block(bottleneck_filters, 1, self.stride)
+        self.conv2 = self.conv_block(input_filters, self.kernel_size, 1)
 
     def call(self, inputs, **kwargs):
         x = inputs
@@ -130,29 +138,26 @@ class ResNetBackbone(Model):
 
     def __init__(self, nf, num_repeats: List[int],
                  return_endpoints_on_call=False,
-                 init_block:Model=InitialBlock,
-                 main_block:Model=ResNetBottleneckBlock,
-                 down_block:Model=ResNetDownBlock, *args, **kwargs):
+                 init_block: Model = InitialBlock,
+                 main_block: Model = ResNetBottleneckBlock,
+                 down_block: Model = ResNetDownBlock, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.return_endpoints_on_call = return_endpoints_on_call
 
-        filters = nf * 4
-        bottleneck_filters = nf
         self.blocks = [
             [
-                init_block(bottleneck_filters)
+                init_block(nf)
             ]
         ]
 
+        filters = nf * 4
         for i, n in enumerate(num_repeats):
             # note that first down block without stride
-            block = [down_block(bottleneck_filters, filters, self.down_stride if i > 0 else 1)]
+            block = [down_block(filters, self.down_stride if i > 0 else 1)]
             for _ in range(n):
-                block.append(main_block(bottleneck_filters))
+                block.append(main_block())
             self.blocks.append(block)
-
             filters *= 2
-            bottleneck_filters *= 2
 
     def call(self, inputs, **kwargs):
         endpoints = []

@@ -140,22 +140,19 @@ class ResNetBackbone(Model):
         bottleneck_filters = nf
         self.blocks = [
             [
-                init_block(bottleneck_filters),
-                down_block(bottleneck_filters, filters, 1)
-                # TODO we use this block to change num filters before ResNet. Is it correct?
+                init_block(bottleneck_filters)
             ]
         ]
 
-        for n in num_repeats:
-            block = []
+        for i, n in enumerate(num_repeats):
+            # note that first down block without stride
+            block = [down_block(bottleneck_filters, filters, self.down_stride if i > 0 else 1)]
             for _ in range(n):
                 block.append(main_block(bottleneck_filters))
+            self.blocks.append(block)
 
             filters *= 2
             bottleneck_filters *= 2
-
-            block.append(down_block(bottleneck_filters, filters, self.down_stride))
-            self.blocks.append(block)
 
     def call(self, inputs, **kwargs):
         endpoints = []
@@ -171,20 +168,20 @@ class ResNetBackbone(Model):
 
 
 def get_resnet18_backbone(nf):
-    return ResNetBackbone(nf, [1, 2, 2, 1], main_block=ResNetIdentityBlock)
+    return ResNetBackbone(nf, [1, 1, 1, 1], main_block=ResNetIdentityBlock)
 
 
 def get_resnet34_backbone(nf):
-    return ResNetBackbone(nf, [2, 4, 6, 2], main_block=ResNetIdentityBlock)
+    return ResNetBackbone(nf, [2, 3, 5, 2], main_block=ResNetIdentityBlock)
 
 
 def get_resnet50_backbone(nf):
-    return ResNetBackbone(nf, [2, 4, 6, 2])
+    return ResNetBackbone(nf, [2, 3, 5, 2])
 
 
 def get_resnet101_backbone(nf):
-    return ResNetBackbone(nf, [2, 4, 23, 2])
+    return ResNetBackbone(nf, [2, 3, 22, 2])
 
 
 def get_resnet152_backbone(nf):
-    return ResNetBackbone(nf, [2, 8, 36, 2])
+    return ResNetBackbone(nf, [2, 7, 35, 2])

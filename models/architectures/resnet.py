@@ -10,7 +10,8 @@ from models.activations import ReLU
 class ConvBn(Sequential):
     def __init__(self, filters, kernel_size, stride, **kwargs):
         super().__init__([
-            Conv2D(filters, kernel_size, stride, use_bias=False, padding='same'),
+            Conv2D(filters, kernel_size, stride, use_bias=False, padding='same',
+                   kernel_regularizer=tf.keras.regularizers.l2(0.0001)),
             BatchNormalization()
         ], **kwargs)
 

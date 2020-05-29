@@ -8,11 +8,17 @@ def resize_by_shorter_size(image: tf.Tensor, size: [int, tuple]):
     :return: augmented image
     """
     if isinstance(size, int):
-        target_shorter_size = size
+        target_shorter_size = tf.cast(size, tf.float32)
     else:
-        target_shorter_size = tf.random.uniform((), size[0], size[1], tf.int32)
-    shorter_size = tf.reduce_min(image.shape[:2])
-    larger_size = tf.cast(tf.math.round(
-        tf.reduce_max(image.shape[:2]) * target_shorter_size / shorter_size), tf.int32)
-    resized_image = tf.image.resize(tf.expand_dims(image, 0), )
-    pass
+        target_shorter_size = tf.random.uniform((), size[0], size[1], tf.float32)
+
+    initial_width = tf.cast(tf.shape(image)[0], tf.float32)
+    initial_height = tf.cast(tf.shape(image)[1], tf.float32)
+    shorter_size = tf.minimum(initial_width, initial_height)
+    ratio = shorter_size / target_shorter_size
+
+    new_width = tf.cast(initial_width / ratio, tf.int32)
+    new_height = tf.cast(initial_height / ratio, tf.int32)
+
+    resized_image = tf.image.resize(image, (new_height, new_width))
+    return resized_image

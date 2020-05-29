@@ -1,10 +1,9 @@
 import tensorflow_datasets
 import tensorflow as tf
 
-IMG_SIZE = 128  # All images will be resized to 160x160
+IMG_SIZE = 128
 BATCH_SIZE = 32
 SHUFFLE_BUFFER_SIZE = 1000
-NGF = 64
 
 # Construct a tf.data.Dataset
 raw_train = tensorflow_datasets.load('imagenet2012', split='train')
@@ -24,5 +23,5 @@ def format_example(sample):
 
 train = raw_train.map(format_example)
 validation = raw_validation.map(format_example)
-train_batches = train.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
+train_batches = train.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
 validation_batches = validation.batch(BATCH_SIZE)

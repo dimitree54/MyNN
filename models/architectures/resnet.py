@@ -124,8 +124,8 @@ class ResNetBottleNeckBlockBuilder(ModelBuilder):
         self.conv_builder = conv_builder
         self.activation_builder = activation_builder
 
-    def build(self, filters, stride=1, **kwargs) -> Model:
-        bottleneck_filters = filters // 4
+    def build(self, filters, stride=1, bottleneck_filters=None, **kwargs) -> Model:
+        bottleneck_filters = bottleneck_filters if bottleneck_filters in kwargs else filters // 4
         return tf.keras.Sequential([
             self.conv_builder.build(filters=bottleneck_filters, kernel_size=1, stride=stride),
             self.activation_builder.build(),

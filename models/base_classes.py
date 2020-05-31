@@ -31,6 +31,13 @@ class SumBlockBuilder(ModelBuilder):
         ], **kwargs)
 
 
+class ConcatBlockBuilder(ModelBuilder):
+    def build(self, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.Concatenate(**kwargs)
+        ], **kwargs)
+
+
 class ClassificationHeadBuilder(ModelBuilder):
     def build(self, num_classes, **kwargs) -> Model:
         return tf.keras.Sequential([

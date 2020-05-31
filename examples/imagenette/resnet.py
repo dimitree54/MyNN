@@ -1,52 +1,8 @@
-import os
-import tensorflow as tf
-
+from examples.imagenette.template import main
 from models.architectures.resnet import get_resnet50_backbone
-from models.base_classes import ClassificationHeadBuilder, ClassificationModel
-from datasets.imagenette import get_data
-
-NF = 64
-BS = 32
-
-
-def get_epoch_from_checkpoint_name(name):
-    without_path = os.path.split(name)[1]
-    return int(without_path)
-
 
 if __name__ == "__main__":
-    logs_dir = os.path.join("resnet50")
-    checkpoint_path = os.path.join(logs_dir, "{epoch}")
-    tensorboard_path = os.path.join(logs_dir, "tensorboard")
-    export_path = os.path.join(logs_dir, "export")
-    backbone_export_path = os.path.join(export_path, "backbone")
-    head_export_path = os.path.join(export_path, "head")
-
-    train_batches, validation_batches = get_data(BS)
-
-    backbone = get_resnet50_backbone(NF)
-    head = ClassificationHeadBuilder().build(10)
-    model = ClassificationModel(backbone, head)
-
-    lr_schedule = tf.keras.callbacks.ReduceLROnPlateau()
-    tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_path)
-    saver = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, monitor="loss", save_best_only=True)
-
-    latest_checkpoint = tf.train.latest_checkpoint(logs_dir)
-    if latest_checkpoint:
-        prev_epoch = get_epoch_from_checkpoint_name(latest_checkpoint)
-    else:
-        prev_epoch = 0
-
-    model.compile(tf.keras.optimizers.SGD(0.1, momentum=0.9),
-                  tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                  tf.keras.metrics.SparseCategoricalAccuracy())
-
-    if latest_checkpoint:
-        model.load_weights(latest_checkpoint)
-
-    history = model.fit(train_batches, epochs=1000, callbacks=[lr_schedule, tensorboard, saver],
-                        initial_epoch=prev_epoch, validation_data=validation_batches)
-
-    backbone.save(backbone_export_path, include_optimizer=False)
-    head.save(head_export_path, include_optimizer=False)
+    nf = 64
+    bs = 32
+    resnet_backbone = get_resnet50_backbone(nf)
+    main(resnet_backbone, "resnet50", bs)

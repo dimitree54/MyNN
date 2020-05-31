@@ -5,7 +5,6 @@ import numpy as np
 from data.augmantations import resize_by_shorter_size
 
 IMG_SIZE = 224
-BATCH_SIZE = 8
 SHUFFLE_BUFFER_SIZE = 1000
 IMAGENET_MEAN_RGB = [123.68, 116.779, 103.939]
 
@@ -45,15 +44,17 @@ def restore(image):
     return image
 
 
-train = raw_train.cache().map(format_example)
-validation = raw_validation.cache().map(format_example)
-train_batches = train.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
-validation_batches = validation.batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
+def get_data(batch_size):
+    train = raw_train.cache().map(format_example)
+    validation = raw_validation.cache().map(format_example)
+    train_batches = train.shuffle(SHUFFLE_BUFFER_SIZE).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+    validation_batches = validation.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+    return train_batches, validation_batches
 
 
-def draw_examples(n=3):
+def draw_examples(data_batches, n=3):
     import matplotlib.pyplot as plt
-    for sample in train_batches.take(n):
+    for sample in data_batches.take(n):
         image = restore(sample[0])[0]
         plt.imshow(image)
         plt.show()

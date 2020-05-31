@@ -2,7 +2,6 @@ import tensorflow_datasets
 import tensorflow as tf
 
 IMG_SIZE = 128
-BATCH_SIZE = 32
 SHUFFLE_BUFFER_SIZE = 1000
 
 # Construct a tf.data.Dataset
@@ -38,15 +37,17 @@ def restore(image):
     return image
 
 
-train = raw_train.map(format_example)
-validation = raw_validation.map(format_example)
-train_batches = train.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
-validation_batches = validation.batch(BATCH_SIZE)
+def get_data(batch_size):
+    train = raw_train.map(format_example)
+    validation = raw_validation.map(format_example)
+    train_batches = train.shuffle(SHUFFLE_BUFFER_SIZE).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+    validation_batches = validation.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+    return train_batches, validation_batches
 
 
-def draw_examples(n=3):
+def draw_examples(data_batches, n=3):
     import matplotlib.pyplot as plt
-    for sample in train_batches.take(n):
+    for sample in data_batches.take(n):
         image = restore(sample[0])[0]
         plt.imshow(image)
         plt.show()

@@ -51,5 +51,5 @@ if __name__ == "__main__":
     history = model.fit(train_batches, epochs=100, callbacks=[lr_schedule, tensorboard, saver],
                         initial_epoch=prev_epoch, validation_data=validation_batches)
 
-    backbone.save(backbone_export_path)
-    head.save(head_export_path)
+    backbone.save(backbone_export_path, include_optimizer=False)
+    head.save(head_export_path, include_optimizer=False)

@@ -39,9 +39,13 @@ class ClassificationHeadBuilder(ModelBuilder):
         ])
 
 
-class ClassificationModel(tf.keras.Sequential):
-    def __init__(self, backbone: Model, head: Model):
-        super().__init__([
-            backbone,
-            head
-        ])
+class ClassificationModel(Model):
+    def __init__(self, backbone: Model, head: Model, **kwargs):
+        super().__init__(**kwargs)
+        self.backbone = backbone
+        self.head = head
+
+    def call(self, inputs, training=None, mask=None):
+        x = self.backbone(inputs)
+        x = self.head(x)
+        return x

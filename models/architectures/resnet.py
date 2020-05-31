@@ -72,7 +72,7 @@ class ResNetIdentityBlockBuilder(ModelBuilder):
             x = self.aggregation_block([x, inputs], training=training, mask=mask)
             x = self.activation_block(x, training=training, mask=mask)
             return x
-        
+
     def build(self, filters, stride, **kwargs) -> Model:
         return self.ResNetIdentityBlock(
             resnet_block=self.resnet_block_builder.build(filters=filters, stride=stride),
@@ -92,7 +92,7 @@ class ResNetIdentityDownBlockBuilder(ModelBuilder):
         self.activation_builder = activation_block_builder
 
     class ResNetIdentityBlock(Model):
-        def __init__(self, resnet_block: Model, projection_block:Model,
+        def __init__(self, resnet_block: Model, projection_block: Model,
                      aggregation_block: Model, activation_block: Model, **kwargs):
             super().__init__(**kwargs)
             self.resnet_block = resnet_block

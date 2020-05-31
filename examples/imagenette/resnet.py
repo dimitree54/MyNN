@@ -5,11 +5,11 @@ from models.architectures.resnet import get_resnet50_backbone
 from models.base_classes import ClassificationHeadBuilder, ClassificationModel
 from datasets.imagenette import get_data
 
-NF = 2
-BS = 2
+NF = 64
+BS = 32
 
 
-def get_epoch_lr_from_checlpoint_name(name):
+def get_epoch_lr_from_checkpoint_name(name):
     without_path = os.path.split(name)[1]
     epoch_str, lr_str = without_path.split('-')
     return int(epoch_str), float(lr_str)
@@ -24,8 +24,8 @@ if __name__ == "__main__":
     head_export_path = os.path.join(export_path, "head")
 
     train_batches, validation_batches = get_data(BS)
-    train_batches = train_batches.take(10)
-    validation_batches = validation_batches.take(10)
+    train_batches = train_batches
+    validation_batches = validation_batches
 
     backbone = get_resnet50_backbone(NF)
     head = ClassificationHeadBuilder().build(10)
@@ -33,17 +33,17 @@ if __name__ == "__main__":
 
     lr_schedule = tf.keras.callbacks.ReduceLROnPlateau()
     tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_path)
-    saver = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, verbose=True)
+    saver = tf.keras.callbacks.ModelCheckpoint(checkpoint_path)
 
     latest_checkpoint = tf.train.latest_checkpoint(logs_dir)
     if latest_checkpoint:
-        prev_epoch, init_lr = get_epoch_lr_from_checlpoint_name(latest_checkpoint)
+        prev_epoch, init_lr = get_epoch_lr_from_checkpoint_name(latest_checkpoint)
     else:
         prev_epoch, init_lr = 0, 0.1
 
     model.compile(tf.keras.optimizers.SGD(init_lr, momentum=0.9),
                   tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                  tf.keras.metrics.SparseCategoricalAccuracy(), run_eagerly=True)
+                  tf.keras.metrics.SparseCategoricalAccuracy())
 
     if latest_checkpoint:
         model.load_weights(latest_checkpoint)

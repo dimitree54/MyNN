@@ -129,7 +129,7 @@ class ResNetBottleNeckBlockBuilder(ModelBuilder):
         return tf.keras.Sequential([
             self.conv_builder.build(filters=bottleneck_filters, kernel_size=1, stride=stride),
             self.activation_builder.build(),
-            self.conv_builder.build(filters=filters, kernel_size=self.kernel_size, stride=1),
+            self.conv_builder.build(filters=bottleneck_filters, kernel_size=self.kernel_size, stride=1),
             self.activation_builder.build(),
             self.conv_builder.build(filters=filters, kernel_size=1, stride=1)
         ], **kwargs)

@@ -9,7 +9,7 @@ from models.base_classes import ModelBuilder, SumBlockBuilder
 
 class ResNeXtBlockBuilder(ModelBuilder):
     cardinality = 32
-    bottleneck_filters = 4
+    base_bottleneck_filters = 4
 
     def __init__(self,
                  single_path_builder: ModelBuilder = ResNetBottleNeckBlockBuilder(),
@@ -30,8 +30,11 @@ class ResNeXtBlockBuilder(ModelBuilder):
             return x
 
     def build(self, filters, stride=1, **kwargs) -> Model:
+        # for layer with 256 input filters we have base_bottleneck_filters as bottleneck size and we increase it
+        # this bottleneck size proportionally to input filters.
+        bottleneck_filters = self.base_bottleneck_filters * filters // 4 // 64
         branches = [self.single_path_builder.build(
-            filters=filters, stride=stride, bottleneck_filters=self.bottleneck_filters)
+            filters=filters, stride=stride, bottleneck_filters=bottleneck_filters)
             for _ in range(self.cardinality)]
         branches_aggregation = self.aggregation_block_builder.build()
         return self.ResNeXtBlock(branches, branches_aggregation)

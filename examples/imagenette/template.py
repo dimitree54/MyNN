@@ -40,7 +40,7 @@ def main(backbone, name, bs):
     if latest_checkpoint:
         model.load_weights(latest_checkpoint)
 
-    model.fit(train_batches, epochs=1000, callbacks=[lr_schedule, tensorboard, saver],
+    model.fit(train_batches, epochs=200, callbacks=[lr_schedule, tensorboard, saver],
               initial_epoch=prev_epoch, validation_data=validation_batches)
 
     backbone.save(backbone_export_path, include_optimizer=False)

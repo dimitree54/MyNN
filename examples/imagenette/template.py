@@ -23,9 +23,10 @@ def main(backbone, name, bs):
     head = ClassificationHeadBuilder().build(10)
     model = ClassificationModel(backbone, head)
 
-    lr_schedule = tf.keras.callbacks.ReduceLROnPlateau()
+    # TODO implement LR reducer on plateau that continue training from the best position (as in cubicasa)
+    lr_schedule = tf.keras.callbacks.ReduceLROnPlateau('val_sparse_categorical_accuracy', patience=30)
     tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_path)
-    saver = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, monitor="loss", save_best_only=True)
+    saver = tf.keras.callbacks.ModelCheckpoint(checkpoint_path)  # TODO make this delete previous checkpoints
 
     latest_checkpoint = tf.train.latest_checkpoint(logs_dir)
     if latest_checkpoint:

@@ -1,6 +1,7 @@
 import os
 import tensorflow as tf
 
+from misc.callbacks import ModelCheckpointBestAndLast
 from models.base_classes import ClassificationHeadBuilder, ClassificationModel
 from datasets.imagenette import get_data
 

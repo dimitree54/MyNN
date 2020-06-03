@@ -10,7 +10,7 @@ from models.base_classes import ModelBuilder, SumBlockBuilder
 
 class ResNeXtBlockBuilderA(ModelBuilder):
     """
-    This implementation dramatically not effective. I can not fit model with BS=1 into 4 Gb Video RAM
+    This implementation does not work it takes more memory abd increases loss
     """
     cardinality = 32
     base_bottleneck_filters = 4
@@ -61,7 +61,7 @@ class ResNeXtBlockBuilderB(ModelBuilder):
 
         def call(self, inputs, training=None, mask=None):
             x = [branch(inputs, training=training, mask=mask) for branch in self.branches]
-            x = self.branches_aggregation(x, training=training, mask=mask)
+            x = self.branches_aggregation(x)
             x = self.final_conv(x, training=training, mask=mask)
             return x
 

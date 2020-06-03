@@ -27,7 +27,7 @@ def main(backbone, name, bs):
     # TODO implement LR reducer on plateau that continue training from the best position (as in cubicasa)
     lr_schedule = tf.keras.callbacks.ReduceLROnPlateau('val_sparse_categorical_accuracy', patience=30)
     tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_path)
-    saver = tf.keras.callbacks.ModelCheckpoint(checkpoint_path)  # TODO make this delete previous checkpoints
+    saver = ModelCheckpointBestAndLast(checkpoint_path)
 
     latest_checkpoint = tf.train.latest_checkpoint(logs_dir)
     if latest_checkpoint:
@@ -45,5 +45,5 @@ def main(backbone, name, bs):
     model.fit(train_batches, epochs=200, callbacks=[lr_schedule, tensorboard, saver],
               initial_epoch=prev_epoch, validation_data=validation_batches)
 
-    backbone.save(backbone_export_path, include_optimizer=False)
+    backbone.save(backbone_export_path, include_optimizer=False)  # TODO test transfer learning restoring this backbone
     head.save(head_export_path, include_optimizer=False)

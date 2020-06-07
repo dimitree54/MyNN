@@ -2,7 +2,7 @@ import tensorflow_datasets
 import tensorflow as tf
 import numpy as np
 
-from data.augmantations import resize_by_shorter_size, random_crop_and_resize
+from data.augmantations import random_crop_and_resize
 
 IMG_SIZE = 128
 SHUFFLE_BUFFER_SIZE = 1000

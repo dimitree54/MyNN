@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 
-from misc.callbacks import ModelCheckpointBestAndLast
+from misc.callbacks import ModelCheckpointBestAndLast, add_warm_up_to_lr, create_gradual_lr_fn
 from models.base_classes import ClassificationHeadBuilder, ClassificationModel
 from datasets.imagenet import get_data
 
@@ -25,7 +25,9 @@ def main(backbone, name, bs):
     model = ClassificationModel(backbone, head)
 
     # TODO implement LR reducer on plateau that continue training from the best position (as in cubicasa)
-    lr_schedule = tf.keras.callbacks.ReduceLROnPlateau('val_sparse_categorical_accuracy', patience=30)
+    # lr_schedule = tf.keras.callbacks.LearningRateScheduler(add_warm_up_to_lr(10, create_gradual_lr_fn(0.1, 30, 0.1)))
+    lr_schedule = tf.keras.callbacks.LearningRateScheduler(add_warm_up_to_lr(
+        10, tf.keras.experimental.CosineDecay(0.1, 120)))
     tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_path)
     saver = ModelCheckpointBestAndLast(checkpoint_path)
 

@@ -31,6 +31,13 @@ class SumBlockBuilder(ModelBuilder):
         ], **kwargs)
 
 
+class IdentityBlockBuilder(ModelBuilder):
+    def build(self, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.Activation('linear')
+        ])
+
+
 class ConcatBlockBuilder(ModelBuilder):
     def build(self, **kwargs) -> Model:
         return tf.keras.Sequential([

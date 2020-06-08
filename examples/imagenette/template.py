@@ -3,7 +3,6 @@ import tensorflow as tf
 
 from misc.callbacks import ModelCheckpointBestAndLast, add_warm_up_to_lr
 from models.base_classes import ClassificationHeadBuilder, ClassificationModel
-from datasets.imagenette import get_data
 
 
 def get_epoch_from_checkpoint_name(name):
@@ -11,7 +10,7 @@ def get_epoch_from_checkpoint_name(name):
     return int(without_path)
 
 
-def main(backbone, name, bs):
+def main(backbone, name, train_batches, validation_batches, epochs=200):
     logs_dir = os.path.join(name)
     checkpoint_path = os.path.join(logs_dir, "{epoch}")
     tensorboard_path = os.path.join(logs_dir, "tensorboard")
@@ -19,13 +18,11 @@ def main(backbone, name, bs):
     backbone_export_path = os.path.join(export_path, "backbone")
     head_export_path = os.path.join(export_path, "head")
 
-    train_batches, validation_batches = get_data(bs)
-
     head = ClassificationHeadBuilder().build(10)
     model = ClassificationModel(backbone, head)
 
     lr_schedule = tf.keras.callbacks.LearningRateScheduler(add_warm_up_to_lr(
-        10, tf.keras.experimental.CosineDecay(0.1, 200)))
+        10, tf.keras.experimental.CosineDecay(0.1, epochs)))
     tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_path)
     saver = ModelCheckpointBestAndLast(checkpoint_path)
 
@@ -42,7 +39,7 @@ def main(backbone, name, bs):
     if latest_checkpoint:
         model.load_weights(latest_checkpoint)
 
-    model.fit(train_batches, epochs=200, callbacks=[lr_schedule, tensorboard, saver],
+    model.fit(train_batches, epochs=epochs, callbacks=[lr_schedule, tensorboard, saver],
               initial_epoch=prev_epoch, validation_data=validation_batches)
 
     backbone.save(backbone_export_path, include_optimizer=False)  # TODO test transfer learning restoring this backbone

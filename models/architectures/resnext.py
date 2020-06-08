@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.python.keras import Model, Sequential
 
 from models.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
-    ResNetIdentityBlockBuilder, ResNetIdentityDownBlockBuilder, ConvBnBuilder
+    ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder, ConvBnBuilder
 from models.base_classes import ModelBuilder, SumBlockBuilder
 
 
@@ -87,7 +87,7 @@ def get_resnext50_backbone(nf):
         resnet_block_builder=ResNetIdentityBlockBuilder(
             conv_block_builder=main_resnet_block
         ),
-        resnet_down_block_builder=ResNetIdentityDownBlockBuilder(
+        resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=main_resnet_block
         )
     ).build(nf, [2, 3, 5, 2], return_endpoints_on_call=False)
@@ -99,7 +99,7 @@ def get_resnext101_backbone(nf):
         resnet_block_builder=ResNetIdentityBlockBuilder(
             conv_block_builder=main_resnet_block
         ),
-        resnet_down_block_builder=ResNetIdentityDownBlockBuilder(
+        resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=main_resnet_block
         )
     ).build(nf, [2, 3, 22, 2], return_endpoints_on_call=False)
@@ -111,7 +111,7 @@ def get_resnext152_backbone(nf):
         resnet_block_builder=ResNetIdentityBlockBuilder(
             conv_block_builder=main_resnet_block
         ),
-        resnet_down_block_builder=ResNetIdentityDownBlockBuilder(
+        resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=main_resnet_block
         )
     ).build(nf, [2, 7, 35, 2], return_endpoints_on_call=False)

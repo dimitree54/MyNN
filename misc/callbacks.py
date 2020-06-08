@@ -58,7 +58,7 @@ def add_warm_up_to_lr(warm_up_epochs: int, base_fn):
 
     def fn(epoch):
         if epoch < warm_up_epochs:
-            return lr_after_warm_up / epoch
+            return lr_after_warm_up * epoch / warm_up_epochs
         else:
             return base_fn(epoch)
     return fn

@@ -11,7 +11,7 @@ def get_epoch_from_checkpoint_name(name):
 
 
 def main(backbone, name, train_batches, validation_batches, epochs=120):
-    logs_dir = os.path.join(name)
+    logs_dir = name
     checkpoint_path = os.path.join(logs_dir, "{epoch}")
     tensorboard_path = os.path.join(logs_dir, "tensorboard")
     export_path = os.path.join(logs_dir, "export")
@@ -33,7 +33,7 @@ def main(backbone, name, train_batches, validation_batches, epochs=120):
         prev_epoch = 0
 
     model.compile(tf.keras.optimizers.SGD(0.1, momentum=0.9),
-                  tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  tf.keras.losses.CategoricalCrossentropy(from_logits=True, label_smoothing=0.1),
                   tf.keras.metrics.SparseCategoricalAccuracy())
 
     if latest_checkpoint:

@@ -13,7 +13,7 @@ IMAGENET_DEV_RGB = [58.293, 57.12, 57.375]
 def train_preprocess(sample):
     image = sample['image']
     label = sample['label']
-    label = tf.one_hot(label, 1000, 1, 0, tf.float32)
+    label = tf.one_hot(label, 1000, 1, 0, -1, tf.float32)
     image = augmentation_transform(image)
     image = preprocess(image)
     return image, label
@@ -22,7 +22,7 @@ def train_preprocess(sample):
 def val_preprocess(sample):
     image = sample['image']
     label = sample['label']
-    label = tf.one_hot(label, 1000, 1, 0, tf.float32)
+    label = tf.one_hot(label, 1000, 1, 0, -1, tf.float32)
     image = validation_transform(image)
     image = preprocess(image)
     return image, label

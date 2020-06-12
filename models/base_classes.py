@@ -25,10 +25,16 @@ class MaxPoolBuilder(ModelBuilder):
 
 
 class SumBlockBuilder(ModelBuilder):
+    class AddModel(Model):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.add_layer = tf.keras.layers.Add(**kwargs)
+
+        def call(self, inputs, training=None, mask=None):
+            return self.add_layer(inputs)
+
     def build(self, **kwargs) -> Model:
-        return tf.keras.Sequential([
-            tf.keras.layers.Add(**kwargs)
-        ], **kwargs)
+        return SumBlockBuilder.AddModel(**kwargs)
 
 
 class IdentityBlockBuilder(ModelBuilder):
@@ -39,10 +45,16 @@ class IdentityBlockBuilder(ModelBuilder):
 
 
 class ConcatBlockBuilder(ModelBuilder):
+    class ConcatModel(Model):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.concat_layer = tf.keras.layers.Add(**kwargs)
+
+        def call(self, inputs, training=None, mask=None):
+            return self.concat_layer(inputs)
+
     def build(self, **kwargs) -> Model:
-        return tf.keras.Sequential([
-            tf.keras.layers.Concatenate(**kwargs)
-        ], **kwargs)
+        return ConcatBlockBuilder.ConcatModel(**kwargs)
 
 
 class ClassificationHeadBuilder(ModelBuilder):

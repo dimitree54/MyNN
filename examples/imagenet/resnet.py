@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     train_batches, validation_batches = get_data(bs)
 
-    train(resnet_backbone, name, train_batches, validation_batches)
+    train(model, name, train_batches, validation_batches)
 
     export_path = os.path.join(name, "export")
     backbone_export_path = os.path.join(export_path, "backbone")

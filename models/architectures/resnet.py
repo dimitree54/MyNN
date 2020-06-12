@@ -3,7 +3,7 @@ from typing import List
 import tensorflow as tf
 from tensorflow.keras import Model
 
-from models.base_classes import ModelBuilder, ReLUBuilder, SumBlockBuilder, MaxPoolBuilder
+from models.base_classes import ModelBuilder, ReLUBuilder, SumBlockBuilder, MaxPoolBuilder, IdentityBlockBuilder
 
 
 class ConvBnBuilder(ModelBuilder):
@@ -51,37 +51,7 @@ class ResNetBlockBuilder(ModelBuilder):
         ], **kwargs)
 
 
-class ResNetIdentityBlockBuilder(ModelBuilder):
-    def __init__(self, conv_block_builder: ModelBuilder = ResNetBlockBuilder(),
-                 aggregation_block_builder: ModelBuilder = SumBlockBuilder(),
-                 activation_block_builder: ModelBuilder = ReLUBuilder()):
-        self.resnet_block_builder = conv_block_builder
-        self.aggregation_block_builder = aggregation_block_builder
-        self.activation_builder = activation_block_builder
-
-    class ResNetIdentityBlock(Model):
-        def __init__(self, resnet_block: Model, aggregation_block: Model, activation_block: Model, **kwargs):
-            super().__init__(**kwargs)
-            self.resnet_block = resnet_block
-            self.aggregation_block = aggregation_block
-            self.activation_block = activation_block
-
-        def call(self, inputs, training=None, mask=None):
-            x = inputs
-            x = self.resnet_block(x, training=training, mask=mask)
-            x = self.aggregation_block([x, inputs], training=training, mask=mask)
-            x = self.activation_block(x, training=training, mask=mask)
-            return x
-
-    def build(self, filters, stride, **kwargs) -> Model:
-        return self.ResNetIdentityBlock(
-            resnet_block=self.resnet_block_builder.build(filters=filters, stride=stride),
-            aggregation_block=self.aggregation_block_builder.build(),
-            activation_block=self.activation_builder.build()
-        )
-
-
-class ResNetIdentityDownBlockBuilder(ModelBuilder):
+class ResNetProjectionDownBlockBuilder(ModelBuilder):
     def __init__(self, conv_block_builder: ModelBuilder = ResNetBlockBuilder(),
                  projection_block_builder: ModelBuilder = ConvBnBuilder(),
                  aggregation_block_builder: ModelBuilder = SumBlockBuilder(),
@@ -117,6 +87,16 @@ class ResNetIdentityDownBlockBuilder(ModelBuilder):
         )
 
 
+class ResNetIdentityBlockBuilder(ResNetProjectionDownBlockBuilder):
+    def __init__(self, conv_block_builder: ModelBuilder = ResNetBlockBuilder(),
+                 aggregation_block_builder: ModelBuilder = SumBlockBuilder(),
+                 activation_block_builder: ModelBuilder = ReLUBuilder()):
+        super().__init__(conv_block_builder=conv_block_builder,
+                         projection_block_builder=IdentityBlockBuilder(),
+                         aggregation_block_builder=aggregation_block_builder,
+                         activation_block_builder=activation_block_builder)
+
+
 class ResNetBottleNeckBlockBuilder(ModelBuilder):
     kernel_size = 3
 
@@ -140,7 +120,7 @@ class ResNetBackboneBuilder(ModelBuilder):
 
     def __init__(self, init_conv_builder: ModelBuilder = InitialConvBlockBuilder(),
                  resnet_block_builder: ModelBuilder = ResNetIdentityBlockBuilder(),
-                 resnet_down_block_builder: ModelBuilder = ResNetIdentityDownBlockBuilder()):
+                 resnet_down_block_builder: ModelBuilder = ResNetProjectionDownBlockBuilder()):
         self.init_conv_builder = init_conv_builder
         self.resnet_block_builder = resnet_block_builder
         self.resnet_down_block_builder = resnet_down_block_builder
@@ -193,7 +173,7 @@ def get_resnet50_backbone(nf):
         resnet_block_builder=ResNetIdentityBlockBuilder(
             conv_block_builder=main_resnet_block
         ),
-        resnet_down_block_builder=ResNetIdentityDownBlockBuilder(
+        resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=main_resnet_block
         )
     ).build(nf, [2, 3, 5, 2], return_endpoints_on_call=False)
@@ -205,7 +185,7 @@ def get_resnet101_backbone(nf):
         resnet_block_builder=ResNetIdentityBlockBuilder(
             conv_block_builder=main_resnet_block
         ),
-        resnet_down_block_builder=ResNetIdentityDownBlockBuilder(
+        resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=main_resnet_block
         )
     ).build(nf, [2, 3, 22, 2], return_endpoints_on_call=False)
@@ -217,7 +197,7 @@ def get_resnet152_backbone(nf):
         resnet_block_builder=ResNetIdentityBlockBuilder(
             conv_block_builder=main_resnet_block
         ),
-        resnet_down_block_builder=ResNetIdentityDownBlockBuilder(
+        resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=main_resnet_block
         )
     ).build(nf, [2, 7, 35, 2], return_endpoints_on_call=False)

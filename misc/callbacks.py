@@ -45,3 +45,20 @@ class ModelCheckpointBestAndLast(tf.keras.callbacks.ModelCheckpoint):
             else:
                 self._remove_prev(self.prev_path)
                 self.prev_path = filepath
+
+
+def create_gradual_lr_fn(initial_lr: float, reduce_every_epochs: int, reduce_factor: float):
+    def fn(epoch):
+        return initial_lr * pow(reduce_factor, epoch // reduce_every_epochs)
+    return fn
+
+
+def add_warm_up_to_lr(warm_up_epochs: int, base_fn):
+    lr_after_warm_up = base_fn(warm_up_epochs)
+
+    def fn(epoch):
+        if epoch < warm_up_epochs:
+            return lr_after_warm_up * epoch / warm_up_epochs
+        else:
+            return base_fn(epoch)
+    return fn

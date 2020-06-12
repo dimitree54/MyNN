@@ -24,6 +24,13 @@ class MaxPoolBuilder(ModelBuilder):
         ], **kwargs)
 
 
+class AvgPoolBuilder(ModelBuilder):
+    def build(self, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.AvgPool2D()
+        ], **kwargs)
+
+
 class SumBlockBuilder(ModelBuilder):
     def build(self, **kwargs) -> Model:
         return tf.keras.Sequential([

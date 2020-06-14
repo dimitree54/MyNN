@@ -1,5 +1,6 @@
 from models.architectures.resnet import ConvBnBuilder, ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
     ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
+from models.architectures.resnext import ResNeXtBlockBuilderB
 from models.base_classes import ModelBuilder, ReLUBuilder, MaxPoolBuilder
 
 import tensorflow as tf
@@ -62,6 +63,14 @@ class XResNetDProjectionBlock(ModelBuilder):
         ], **kwargs)
 
 
+class XResNeXtBlockBuilderB(ResNeXtBlockBuilderB):
+    def build_branch(self, bottleneck_filters, stride, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            self.conv_builder.build(filters=bottleneck_filters, kernel_size=1, stride=1, **kwargs),
+            self.conv_builder.build(filters=bottleneck_filters, kernel_size=3, stride=stride, **kwargs)
+        ])
+
+
 def get_xresnet50_backbone(nf):
     return ResNetBackboneBuilder(
         init_conv_builder=XResNetInitialConvBlockBuilder(),
@@ -70,6 +79,20 @@ def get_xresnet50_backbone(nf):
         ),
         resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=XResNetDBottleneckBlock(),
+            projection_block_builder=XResNetDProjectionBlock()
+        )
+    ).build(nf, [2, 3, 5, 2], return_endpoints_on_call=False)
+
+
+def get_xresnext50_backbone(nf):
+    main_resnet_block = XResNeXtBlockBuilderB()
+    return ResNetBackboneBuilder(
+        init_conv_builder=XResNetInitialConvBlockBuilder(),
+        resnet_block_builder=ResNetIdentityBlockBuilder(
+            conv_block_builder=main_resnet_block
+        ),
+        resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
+            conv_block_builder=main_resnet_block,
             projection_block_builder=XResNetDProjectionBlock()
         )
     ).build(nf, [2, 3, 5, 2], return_endpoints_on_call=False)

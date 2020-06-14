@@ -30,7 +30,6 @@ def val_preprocess(sample):
 
 
 def augmentation_transform(image):
-    # TODO probably we should turn off augmentation for imagenette
     # Train data input pipeline mainly from paper xResNet, but without PCA color augmentation
     image = tf.image.random_flip_left_right(image)
     image = random_crop_and_resize(image, (IMG_SIZE, IMG_SIZE), (0.08, 1), (3/4, 4/3))

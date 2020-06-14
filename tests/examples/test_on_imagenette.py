@@ -92,7 +92,7 @@ class TestResNet18(TestCase):
 
 
 class TestXResNet50(TestCase):
-    name = "resnet50_delme"
+    name = "xresnet50_delme"
     nf = 16
 
     def test_xresnet50(self):

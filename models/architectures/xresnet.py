@@ -32,7 +32,6 @@ class XResNetInitialConvBlockBuilder(ModelBuilder):
 
 class XResNetDBottleneckBlock(ModelBuilder):
     kernel_size = 3
-    stride = 2
 
     def __init__(self, conv_block_builder: ModelBuilder = ConvBnBuilder(),
                  activation_block_builder: ModelBuilder = ReLUBuilder()):
@@ -44,7 +43,7 @@ class XResNetDBottleneckBlock(ModelBuilder):
         return tf.keras.Sequential([
             self.conv_block_builder.build(filters=bottleneck_filters, kernel_size=1, stride=1),
             self.activation_block_builder.build(),
-            self.conv_block_builder.build(filters=bottleneck_filters, kernel_size=self.kernel_size, stride=self.stride),
+            self.conv_block_builder.build(filters=bottleneck_filters, kernel_size=self.kernel_size, stride=stride),
             self.activation_block_builder.build(),
             self.conv_block_builder.build(filters=filters, kernel_size=1, stride=1)
         ], **kwargs)
@@ -56,10 +55,10 @@ class XResNetDProjectionBlock(ModelBuilder):
         self.conv_block_builder = conv_block_builder
         self.downsampling_block_builder = downsampling_block_builder
 
-    def build(self, filters, **kwargs) -> Model:
+    def build(self, filters, kernel_size=1, stride=2, **kwargs) -> Model:
         return tf.keras.Sequential([
-            self.downsampling_block_builder.build(),
-            self.conv_block_builder.build(filters=filters, kernel_size=1, stride=1)
+            self.downsampling_block_builder.build(stride=stride),
+            self.conv_block_builder.build(filters=filters, kernel_size=kernel_size, stride=1)
         ], **kwargs)
 
 

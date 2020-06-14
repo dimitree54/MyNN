@@ -18,16 +18,16 @@ class ReLUBuilder(ModelBuilder):
 
 
 class MaxPoolBuilder(ModelBuilder):
-    def build(self, **kwargs) -> Model:
+    def build(self, kernel_size=2, stride=2, **kwargs) -> Model:
         return tf.keras.Sequential([
-            tf.keras.layers.MaxPool2D()
+            tf.keras.layers.MaxPool2D(pool_size=kernel_size, strides=stride, padding="same")
         ], **kwargs)
 
 
 class AvgPoolBuilder(ModelBuilder):
-    def build(self, **kwargs) -> Model:
+    def build(self, kernel_size=2, stride=2,  **kwargs) -> Model:
         return tf.keras.Sequential([
-            tf.keras.layers.AvgPool2D()
+            tf.keras.layers.AvgPool2D(pool_size=kernel_size, strides=stride, padding="same")
         ], **kwargs)
 
 

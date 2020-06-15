@@ -17,6 +17,13 @@ class ReLUBuilder(ModelBuilder):
         ], **kwargs)
 
 
+class SigmoidBuilder(ModelBuilder):
+    def build(self, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.Activation("sigmoid")
+        ], **kwargs)
+
+
 class MaxPoolBuilder(ModelBuilder):
     def build(self, kernel_size=2, stride=2, **kwargs) -> Model:
         return tf.keras.Sequential([
@@ -28,6 +35,20 @@ class AvgPoolBuilder(ModelBuilder):
     def build(self, kernel_size=2, stride=2,  **kwargs) -> Model:
         return tf.keras.Sequential([
             tf.keras.layers.AvgPool2D(pool_size=kernel_size, strides=stride, padding="same")
+        ], **kwargs)
+
+
+class GlobalAvgPoolBuilder(ModelBuilder):
+    def build(self, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.GlobalAvgPool2D()
+        ], **kwargs)
+
+
+class FCBlockBuilder(ModelBuilder):
+    def build(self, units, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.Dense(units=units)
         ], **kwargs)
 
 

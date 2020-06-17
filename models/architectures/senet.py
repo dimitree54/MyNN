@@ -1,12 +1,12 @@
-from models.architectures.resnet import ConvBnBuilder, ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
-    ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
-from models.architectures.xresnet import XResNeXtBlockBuilderB, XResNetInitialConvBlockBuilder, XResNetDProjectionBlock, \
-    XResNetDBottleneckBlock
-from models.base_classes import ModelBuilder, ReLUBuilder, MaxPoolBuilder, AvgPoolBuilder, GlobalAvgPoolBuilder, \
-    SigmoidBuilder, FCBlockBuilder
-
 import tensorflow as tf
 from tensorflow.keras import Model
+
+from models.architectures.resnet import ConvBnBuilder, ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
+    ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
+from models.architectures.xresnet import XResNeXtBlockBuilderB, XResNetInitialConvBlockBuilder, \
+    XResNetDProjectionBlock, XResNetDBottleneckBlock
+from models.base_classes import ModelBuilder, ReLUBuilder, GlobalAvgPoolBuilder, \
+    SigmoidBuilder, FCBlockBuilder
 
 
 class SEBlockBuilder(ModelBuilder):

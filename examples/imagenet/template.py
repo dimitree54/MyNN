@@ -28,7 +28,7 @@ def train(model: tf.keras.Model, name, train_batches, validation_batches, epochs
 
     model.compile(tf.keras.optimizers.SGD(momentum=0.9),
                   tf.keras.losses.CategoricalCrossentropy(from_logits=True, label_smoothing=0.1),
-                  tf.keras.metrics.CategoricalAccuracy())  # TODO add top-5 accuracy
+                  [tf.keras.metrics.CategoricalAccuracy(), tf.keras.metrics.TopKCategoricalAccuracy()])
 
     if latest_checkpoint:
         model.load_weights(latest_checkpoint)

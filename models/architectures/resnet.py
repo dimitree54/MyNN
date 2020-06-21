@@ -44,7 +44,6 @@ class ResNetBlockBuilder(ModelBuilder):
 
     def build(self, filters, stride=1, **kwargs) -> Model:
         return tf.keras.Sequential([
-            # TODO it is not very clear where to do stride, in first or second conv
             self.conv_builder.build(filters=filters, kernel_size=self.kernel_size, stride=stride),
             self.activation_builder.build(),
             self.conv_builder.build(filters=filters, kernel_size=self.kernel_size, stride=1),
@@ -201,3 +200,15 @@ def get_resnet152_backbone(nf):
             conv_block_builder=main_resnet_block
         )
     ).build(nf, [2, 7, 35, 2], return_endpoints_on_call=False)
+
+
+class ResNetDecoderBuilder(ModelBuilder):
+    def __init__(self):
+        super().__init__()
+
+    class DecoderModel(Model):
+        def __init__(self):
+            super().__init__()
+
+    def build(self, **kwargs) -> Model:
+        pass

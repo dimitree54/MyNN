@@ -6,9 +6,10 @@ from unittest import TestCase
 
 from datasets.imagenette import get_data
 from examples.imagenette.template import train
+from models.architectures.senet import get_se_resnet50_backbone
 from models.architectures.resnet import get_resnet50_backbone, get_resnet18_backbone
 from models.architectures.resnext import get_resnext50_backbone
-from models.architectures.xresnet import get_xresnet50_backbone
+from models.architectures.xresnet import get_x_resnet50_backbone
 from models.base_classes import ClassificationHeadBuilder, ClassificationModel
 
 
@@ -96,7 +97,20 @@ class TestXResNet50(TestCase):
     nf = 16
 
     def test_xresnet50(self):
-        backbone = get_xresnet50_backbone(self.nf)
+        backbone = get_x_resnet50_backbone(self.nf)
+        self.assertTrue(test_nn(self.name, backbone))
+
+    def tearDown(self) -> None:
+        if os.path.isdir(self.name):
+            shutil.rmtree(self.name)
+
+
+class TestSEResNet50(TestCase):
+    name = "se_xresnet50_delme"
+    nf = 16
+
+    def test_xresnet50(self):
+        backbone = get_se_resnet50_backbone(self.nf)
         self.assertTrue(test_nn(self.name, backbone))
 
     def tearDown(self) -> None:

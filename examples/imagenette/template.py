@@ -16,7 +16,7 @@ def train(model: tf.keras.Model, name, train_batches, validation_batches, epochs
     tensorboard_path = os.path.join(logs_dir, "tensorboard")
 
     # TODO maybe try linear lr scaling as described in bag of tricks (they use 0.1 lr for bs 256): use 0.025 for bs 64?
-    # TODO fastAI also use mish instead of relu. Alos it uses self-attention. What paper describes SA?
+    # TODO fastAI also use mish instead of relu. Also it uses self-attention. What paper describes SA?
     # TODO also there is pre_activation-ResNet that surpass Resnet. But probably this is important only for resnet > 100
     lr_schedule = tf.keras.callbacks.LearningRateScheduler(add_warm_up_to_lr(
         10, tf.keras.experimental.CosineDecay(base_lr, epochs)))

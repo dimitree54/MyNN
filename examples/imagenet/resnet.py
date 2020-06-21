@@ -11,7 +11,7 @@ if __name__ == "__main__":
     name = "resnet50"
 
     resnet_backbone = get_resnet50_backbone(nf)
-    head = ClassificationHeadBuilder().build(10)
+    head = ClassificationHeadBuilder().build(1000)
     model = ClassificationModel(resnet_backbone, head)
 
     train_batches, validation_batches = get_data(bs)

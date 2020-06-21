@@ -200,3 +200,15 @@ def get_resnet152_backbone(nf):
             conv_block_builder=main_resnet_block
         )
     ).build(nf, [2, 7, 35, 2], return_endpoints_on_call=False)
+
+
+class ResNetDecoderBuilder(ModelBuilder):
+    def __init__(self):
+        super().__init__()
+
+    class DecoderModel(Model):
+        def __init__(self):
+            super().__init__()
+
+    def build(self, **kwargs) -> Model:
+        pass

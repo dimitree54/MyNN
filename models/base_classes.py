@@ -45,6 +45,27 @@ class GlobalAvgPoolBuilder(ModelBuilder):
         ], **kwargs)
 
 
+class UpsampleBilinear(ModelBuilder):
+    class ResizeModel(Model):
+        def __init__(self, resize_rate):
+            super().__init__()
+            self.resize_layer = None
+            self.resize_rate = resize_rate
+
+        def build(self, input_shape):
+            self.resize_layer = tf.keras.layers.Lambda(
+                lambda image: tf.image.resize(
+                    image,  (input_shape[1] * self.resize_rate, input_shape[2] * self.resize_rate)
+                )
+            )
+
+        def call(self, inputs, training=None, mask=None):
+            return self.resize_layer(inputs)
+
+    def build(self, stride=2, **kwargs) -> Model:
+        return UpsampleBilinear.ResizeModel(resize_rate=stride)
+
+
 class FCBlockBuilder(ModelBuilder):
     def build(self, units, **kwargs) -> Model:
         return tf.keras.Sequential([
@@ -103,57 +124,3 @@ class ClassificationModel(Model):
         x = self.backbone(inputs, training=training, mask=mask)
         x = self.head(x, training=training, mask=mask)
         return x
-
-
-class GenerationModel(Model):
-    def __init__(self, encoder: Model, decoder: Model, **kwargs):
-        super().__init__(**kwargs)
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def call(self, inputs, training=None, mask=None):
-        x = self.encoder(inputs, training=training, mask=mask)
-        x = self.decoder(x, training=training, mask=mask)
-        return x
-
-
-class GenerationWithClassificationModel(Model):
-    def __init__(self, encoder: Model, decoder: Model, classification_head: Model, **kwargs):
-        super().__init__(**kwargs)
-        self.encoder = encoder
-        self.decoder = decoder
-        self.classification_head = classification_head
-
-    def call(self, inputs, training=None, mask=None):
-        x = self.encoder(inputs, training=training, mask=mask)
-        class_x = self.head(x, training=training, mask=mask)
-        x = self.decoder(x, training=training, mask=mask)
-        return [x, class_x]
-
-
-class GenerationAdversarialModel(Model):
-    def __init__(self, encoder: Model, decoder: Model, discriminator: Model, **kwargs):
-        super().__init__(**kwargs)
-        self.encoder = encoder
-        self.decoder = decoder
-        self.discriminator = discriminator
-
-    def call(self, inputs, training=None, mask=None):
-        x = self.encoder(inputs, training=training, mask=mask)
-        reconstruction_x = self.decoder(x, training=training, mask=mask)
-        disc_x = self.discriminator(reconstruction_x, training=training, mask=mask)
-        return [reconstruction_x, disc_x]
-
-
-class ConditionalGenerationAdversarialModel(Model):
-    def __init__(self, encoder: Model, decoder: Model, discriminator: Model, **kwargs):
-        super().__init__(**kwargs)
-        self.encoder = encoder
-        self.decoder = decoder
-        self.discriminator = discriminator
-
-    def call(self, inputs, training=None, mask=None):
-        x = self.encoder(inputs, training=training, mask=mask)
-        reconstruction_x = self.decoder(x, training=training, mask=mask)
-        disc_x = self.discriminator(tf.concat([reconstruction_x, inputs], axis=-1), training=training, mask=mask)
-        return [reconstruction_x, disc_x]

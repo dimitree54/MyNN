@@ -2,15 +2,16 @@ import os
 
 from datasets.imagenette import get_data
 from examples.imagenette.template import train
-from models.architectures.senet import get_xse_resnext50_backbone
+from models.architectures.senet import get_xse_resnext50_backbone, get_ge_resnet50_backbone
 from models.base_classes import ClassificationHeadBuilder, ClassificationModel
 
 if __name__ == "__main__":
     nf = 64
     bs = 32
-    name = "xse_resnext50"
+    name = "ge_resnext50"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-    resnet_backbone = get_xse_resnext50_backbone(nf)
+    resnet_backbone = get_ge_resnet50_backbone(nf)
     head = ClassificationHeadBuilder().build(10)
     model = ClassificationModel(resnet_backbone, head)
 

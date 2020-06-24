@@ -1,13 +1,12 @@
 from typing import List
 
-from models.architectures.resnet import ConvBnBuilder, ResNetBottleNeckBlockBuilder, ResNetProjectionDownBlockBuilder, \
-    ResNetIdentityBlockBuilder, ResNetBackboneBuilder
-from models.architectures.xresnet import XResNetDBottleneckBlock, XResNetDProjectionBlock, \
-    XResNetInitialConvBlockBuilder
-from models.base_classes import ModelBuilder, ReLUBuilder, UpsampleBilinear, ConcatBlockBuilder
-
-from tensorflow.keras import Model
 import tensorflow as tf
+from tensorflow.keras import Model
+
+from models.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetProjectionDownBlockBuilder, \
+    ResNetIdentityBlockBuilder
+from models.architectures.xresnet import XResNetDBottleneckBlock, XResNetDProjectionBlock
+from models.base_classes import ModelBuilder, ReLUBuilder, UpsampleBilinear, ConcatBlockBuilder
 
 
 class UpsampleConvBnBuilder(ModelBuilder):

@@ -71,7 +71,7 @@ class XResNeXtBlockBuilderB(ResNeXtBlockBuilderB):
         ])
 
 
-def get_xresnet50_backbone(nf):
+def get_x_resnet50_backbone(nf, return_endpoints_on_call=False):
     return ResNetBackboneBuilder(
         init_conv_builder=XResNetInitialConvBlockBuilder(),
         resnet_block_builder=ResNetIdentityBlockBuilder(
@@ -81,10 +81,10 @@ def get_xresnet50_backbone(nf):
             conv_block_builder=XResNetDBottleneckBlock(),
             projection_block_builder=XResNetDProjectionBlock()
         )
-    ).build(nf, [2, 3, 5, 2], return_endpoints_on_call=False)
+    ).build(nf, [2, 3, 5, 2], return_endpoints_on_call=return_endpoints_on_call)
 
 
-def get_xresnext50_backbone(nf):
+def get_x_resnext50_backbone(nf):
     main_resnet_block = XResNeXtBlockBuilderB()
     return ResNetBackboneBuilder(
         init_conv_builder=XResNetInitialConvBlockBuilder(),

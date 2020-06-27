@@ -24,6 +24,13 @@ class SigmoidBuilder(ModelBuilder):
         ], **kwargs)
 
 
+class SoftmaxBuilder(ModelBuilder):
+    def build(self, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.Softmax()
+        ], **kwargs)
+
+
 class MaxPoolBuilder(ModelBuilder):
     def build(self, kernel_size=2, stride=2, **kwargs) -> Model:
         return tf.keras.Sequential([
@@ -43,6 +50,27 @@ class GlobalAvgPoolBuilder(ModelBuilder):
         return tf.keras.Sequential([
             tf.keras.layers.GlobalAvgPool2D()
         ], **kwargs)
+
+
+class UpsampleBilinear(ModelBuilder):
+    class ResizeModel(Model):
+        def __init__(self, resize_rate):
+            super().__init__()
+            self.resize_layer = None
+            self.resize_rate = resize_rate
+
+        def build(self, input_shape):
+            self.resize_layer = tf.keras.layers.Lambda(
+                lambda image: tf.image.resize(
+                    image,  (input_shape[1] * self.resize_rate, input_shape[2] * self.resize_rate)
+                )
+            )
+
+        def call(self, inputs, training=None, mask=None):
+            return self.resize_layer(inputs)
+
+    def build(self, stride=2, **kwargs) -> Model:
+        return UpsampleBilinear.ResizeModel(resize_rate=stride)
 
 
 class FCBlockBuilder(ModelBuilder):
@@ -100,6 +128,6 @@ class ClassificationModel(Model):
         self.head = head
 
     def call(self, inputs, training=None, mask=None):
-        x = self.backbone(inputs)
-        x = self.head(x)
+        x = self.backbone(inputs, training=training, mask=mask)
+        x = self.head(x, training=training, mask=mask)
         return x

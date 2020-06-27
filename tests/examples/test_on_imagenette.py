@@ -6,7 +6,7 @@ from unittest import TestCase
 
 from datasets.imagenette import get_data
 from examples.imagenette.template import train
-from models.architectures.senet import get_se_resnet50_backbone
+from models.architectures.resnet_with_attention import get_se_resnet50_backbone
 from models.architectures.resnet import get_resnet50_backbone, get_resnet18_backbone
 from models.architectures.resnext import get_resnext50_backbone
 from models.architectures.xresnet import get_x_resnet50_backbone

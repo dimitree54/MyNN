@@ -24,6 +24,13 @@ class SigmoidBuilder(ModelBuilder):
         ], **kwargs)
 
 
+class SoftmaxBuilder(ModelBuilder):
+    def build(self, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.Softmax()
+        ], **kwargs)
+
+
 class MaxPoolBuilder(ModelBuilder):
     def build(self, kernel_size=2, stride=2, **kwargs) -> Model:
         return tf.keras.Sequential([

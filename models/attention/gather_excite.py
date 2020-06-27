@@ -1,5 +1,8 @@
 """
 https://arxiv.org/pdf/1810.12348.pdf
+
+Here implemented only block with best performance (but most computationally expensive) GEBlockThetaPlus
+TODO not trained
 """
 from models.architectures.resnet import ConvBnBuilder
 from models.base_classes import ModelBuilder, ReLUBuilder, SigmoidBuilder
@@ -17,6 +20,33 @@ class DepthwiseConvBnBuilder(ModelBuilder):
         ], **kwargs)
 
 
+class GEBlockThetaPlus(Model):
+    def __init__(self, init_conv_block_builder: ModelBuilder,
+                 internal_conv_block_builder: ModelBuilder,
+                 internal_activation_builder: ModelBuilder,
+                 output_activation_builder: ModelBuilder):
+        super().__init__()
+        self.init_conv_block_builder = init_conv_block_builder
+        self.internal_conv_block_builder = internal_conv_block_builder
+        self.internal_activation_builder = internal_activation_builder
+        self.output_activation_builder = output_activation_builder
+        self.ge_branch = None
+
+    def build(self, input_shape):
+        self.ge_branch = tf.keras.Sequential([
+            self.init_conv_block_builder.build(filters=input_shape[-1],
+                                               kernel_size=input_shape[1:3], stride=input_shape[1:3]),
+            self.internal_activation_builder.build(),
+            self.internal_conv_block_builder.build(filters=input_shape[-1], kernel_size=1),
+            self.output_activation_builder.build()
+        ])
+
+    def call(self, inputs, training=None, mask=None):
+        channels_attention = self.ge_branch(inputs, training=None, mask=None)
+        result = inputs * channels_attention
+        return result
+
+
 class GEBlockBuilder(ModelBuilder):
     def __init__(self,
                  init_conv_block_builder: ModelBuilder = DepthwiseConvBnBuilder(),
@@ -28,34 +58,8 @@ class GEBlockBuilder(ModelBuilder):
         self.internal_activation_builder = internal_activation_builder
         self.output_activation_builder = output_activation_builder
 
-    class GEBlockThetaPlus(Model):
-        def __init__(self, init_conv_block_builder: ModelBuilder,
-                     internal_conv_block_builder: ModelBuilder,
-                     internal_activation_builder: ModelBuilder,
-                     output_activation_builder: ModelBuilder):
-            super().__init__()
-            self.init_conv_block_builder = init_conv_block_builder
-            self.internal_conv_block_builder = internal_conv_block_builder
-            self.internal_activation_builder = internal_activation_builder
-            self.output_activation_builder = output_activation_builder
-            self.ge_branch = None
-
-        def build(self, input_shape):
-            self.ge_branch = tf.keras.Sequential([
-                self.init_conv_block_builder.build(filters=input_shape[-1],
-                                                   kernel_size=input_shape[1:3], stride=input_shape[1:3]),
-                self.internal_activation_builder.build(),
-                self.internal_conv_block_builder.build(filters=input_shape[-1], kernel_size=1),
-                self.output_activation_builder.build()
-            ])
-
-        def call(self, inputs, training=None, mask=None):
-            channels_attention = self.ge_branch(inputs, training=None, mask=None)
-            result = inputs * channels_attention
-            return result
-
     def build(self, **kwargs) -> Model:
-        return self.GEBlockThetaPlus(
+        return GEBlockThetaPlus(
             self.init_conv_block_builder,
             self.internal_conv_block_builder,
             self.internal_activation_builder,

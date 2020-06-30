@@ -6,7 +6,8 @@ from unittest import TestCase
 
 from datasets.imagenette import get_data
 from examples.imagenette.template import train
-from models.architectures.resnet_with_attention import get_se_resnet50_backbone
+from models.architectures.resnet_with_attention import get_se_resnet50_backbone, get_nl_resnet50_backbone, \
+    get_ge_resnet50_backbone
 from models.architectures.resnet import get_resnet50_backbone, get_resnet18_backbone
 from models.architectures.resnext import get_resnext50_backbone
 from models.architectures.xresnet import get_x_resnet50_backbone
@@ -106,11 +107,37 @@ class TestXResNet50(TestCase):
 
 
 class TestSEResNet50(TestCase):
-    name = "se_xresnet50_delme"
+    name = "se_resnet50_delme"
     nf = 16
 
-    def test_xresnet50(self):
+    def test_se_resnet50(self):
         backbone = get_se_resnet50_backbone(self.nf)
+        self.assertTrue(test_nn(self.name, backbone))
+
+    def tearDown(self) -> None:
+        if os.path.isdir(self.name):
+            shutil.rmtree(self.name)
+
+
+class TestGEResNet50(TestCase):
+    name = "ge_resnet50_delme"
+    nf = 16
+
+    def test_ge_resnet50(self):
+        backbone = get_ge_resnet50_backbone(self.nf)
+        self.assertTrue(test_nn(self.name, backbone))
+
+    def tearDown(self) -> None:
+        if os.path.isdir(self.name):
+            shutil.rmtree(self.name)
+
+
+class TestNLResNet50(TestCase):
+    name = "nl_resnet50_delme"
+    nf = 16
+
+    def test_nl_resnet50(self):
+        backbone = get_nl_resnet50_backbone(self.nf)
         self.assertTrue(test_nn(self.name, backbone))
 
     def tearDown(self) -> None:

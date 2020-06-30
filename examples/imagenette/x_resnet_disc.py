@@ -85,8 +85,8 @@ def train_step(train_batch):
     class_true_label = tf.argmax(train_batch[1], -1)
     class_correct = tf.cast(class_pred_label == class_true_label, tf.float32)
 
-    weight_for_0 = (1 - class_acc) / 2.0
-    weight_for_1 = class_acc / 2.0
+    weight_for_0 = tf.divide(tf.subtract(1.0, class_acc), 2.0)
+    weight_for_1 = tf.divide(class_acc, 2.0)
     loss_weights = class_correct * weight_for_1 + (1 - class_correct) * weight_for_0
 
     with tf.GradientTape() as tape:

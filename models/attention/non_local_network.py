@@ -1,9 +1,13 @@
 """
 https://arxiv.org/abs/1711.07971
 Implemented spatial-only embedded Gaussian version with subsampling trick (with max-pooling).
-TODO not tested
+Applying it to all res blocks leads to some instability (probably exploding gradients).
+But using 5 blocks (2 in res3 and 3 in res4) works fine.
 """
+from typing import Tuple, List
+
 from models.architectures.resnet import ResNetIdentityBlockBuilder
+from models.attention.base import BlockWithPostAttentionBuilder
 from models.base_classes import ModelBuilder, MaxPoolBuilder, SoftmaxBuilder, \
     SumBlockBuilder, IdentityBlockBuilder
 
@@ -11,12 +15,11 @@ import tensorflow as tf
 from tensorflow.keras import Model
 
 
-class Conv1x1BnBuilder(ModelBuilder):
+class Conv1x1Builder(ModelBuilder):
     def build(self, filters, **kwargs):
         return tf.keras.Sequential([
             tf.keras.layers.Conv2D(filters, 1, 1, use_bias=False, padding='same',
-                                   kernel_regularizer=tf.keras.regularizers.l2(0.0001)),
-            tf.keras.layers.BatchNormalization()
+                                   kernel_regularizer=tf.keras.regularizers.l2(0.0001))
         ], **kwargs)
 
 
@@ -34,8 +37,8 @@ class NonLocalBlock(Model):
         self.query_conv = None
         self.keys_conv = None
         self.values_conv = None
-        self.query_pooling_block = pooling_block_builder.build()
         self.keys_pooling_block = pooling_block_builder.build()
+        self.values_pooling_block = pooling_block_builder.build()
         self.activation_block = activation_block_builder.build()
         self.post_attention_conv = None
         self.bottleneck_channels = 0
@@ -48,23 +51,26 @@ class NonLocalBlock(Model):
         self.post_attention_conv = self.embedding_block_builder.build(filters=input_shape[-1])
 
     def call(self, inputs, training=None, mask=None):
-        inputs_shape = tf.shape(inputs)
+        inputs_shape = inputs.get_shape()
 
-        query = self.keys_conv(inputs)
+        query = self.query_conv(inputs)
         keys = self.keys_conv(inputs)
-        values = self.keys_conv(inputs)
+        values = self.values_conv(inputs)
 
-        query = self.query_pooling_block(query)
+        # not that we do not pool query, so inputs and attention tensors will match
         keys = self.keys_pooling_block(keys)
+        values = self.values_pooling_block(values)
 
-        query = tf.reshape(query, [inputs_shape[0], inputs_shape[1]*inputs_shape[2], inputs_shape[3]])
-        keys = tf.reshape(keys, [inputs_shape[0], inputs_shape[1]*inputs_shape[2], inputs_shape[3]])
-        values = tf.reshape(values, [inputs_shape[0], inputs_shape[1]*inputs_shape[2], inputs_shape[3]])
+        pooled_shape = keys.get_shape()
 
+        query = tf.reshape(query, [-1, inputs_shape[1]*inputs_shape[2], pooled_shape[3]])
+        keys = tf.reshape(keys, [-1, pooled_shape[1]*pooled_shape[2], pooled_shape[3]])
+        values = tf.reshape(values, [-1, pooled_shape[1]*pooled_shape[2], pooled_shape[3]])
         attention = tf.linalg.matmul(query, keys, transpose_b=True)
         attention = self.activation_block(attention)
 
         result = tf.linalg.matmul(attention, values)
+        result = tf.reshape(result, [-1, inputs_shape[1], inputs_shape[2], pooled_shape[3]])
         result = self.post_attention_conv(result)
 
         return result
@@ -73,7 +79,7 @@ class NonLocalBlock(Model):
 class NonLocalBlockBuilder(ModelBuilder):
     bottleneck_rate = 2
 
-    def __init__(self, embedding_block_builder: ModelBuilder = Conv1x1BnBuilder(),  # TODO make this Conv always 1x1
+    def __init__(self, embedding_block_builder: ModelBuilder = Conv1x1Builder(),
                  pooling_block_builder: ModelBuilder = MaxPoolBuilder(),
                  activation_block_builder: ModelBuilder = SoftmaxBuilder()):
         self.embedding_block_builder = embedding_block_builder
@@ -90,7 +96,7 @@ class NonLocalBlockBuilder(ModelBuilder):
 
 
 class ResNonLocalBlockBuilder(ResNetIdentityBlockBuilder):
-    def __init__(self, embedding_block_builder: ModelBuilder = Conv1x1BnBuilder(),  # TODO make this Conv always 1x1
+    def __init__(self, embedding_block_builder: ModelBuilder = Conv1x1Builder(),
                  pooling_block_builder: ModelBuilder = MaxPoolBuilder(),
                  attention_activation_block_builder: ModelBuilder = SoftmaxBuilder(),
                  aggregation_block_builder: ModelBuilder = SumBlockBuilder(),
@@ -99,3 +105,15 @@ class ResNonLocalBlockBuilder(ResNetIdentityBlockBuilder):
             conv_block_builder=NonLocalBlockBuilder(embedding_block_builder, pooling_block_builder,
                                                     attention_activation_block_builder),
             aggregation_block_builder=aggregation_block_builder, activation_block_builder=activation_block_builder)
+
+
+class AttentionInSpecifiedResNetLocations(BlockWithPostAttentionBuilder):
+    def __init__(self, locations: List[Tuple], main_block_builder: ModelBuilder, attention_block_builder: ModelBuilder):
+        super().__init__(main_block_builder, attention_block_builder)
+        self.locations = locations
+
+    def build(self, filters, stride=1, n_stage=-1, n_block=-1, **kwargs) -> tf.keras.Model:
+        if (n_stage, n_block) in self.locations:
+            return super().build(filters=filters, stride=stride, **kwargs)
+        else:
+            return self.main_block_builder.build(filters=filters, stride=stride, **kwargs)

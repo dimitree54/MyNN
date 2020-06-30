@@ -18,7 +18,6 @@ class ConvBnBuilder(ModelBuilder):
 class InitialConvBlockBuilder(ModelBuilder):
     kernel_size = 7
     pool_size = 3
-    stride = 2
 
     def __init__(self, conv_block_builder: ModelBuilder = ConvBnBuilder(),
                  activation_block_builder: ModelBuilder = ReLUBuilder(),
@@ -27,9 +26,9 @@ class InitialConvBlockBuilder(ModelBuilder):
         self.activation_block_builder = activation_block_builder
         self.downsampling_block_builder = downsampling_block_builder
 
-    def build(self, filters, **kwargs) -> Model:
+    def build(self, filters, stride=2, **kwargs) -> Model:
         return tf.keras.Sequential([
-            self.conv_block_builder.build(filters=filters, kernel_size=self.kernel_size, stride=self.stride),
+            self.conv_block_builder.build(filters=filters, kernel_size=self.kernel_size, stride=stride),
             self.activation_block_builder.build(),
             self.downsampling_block_builder.build()
         ], **kwargs)
@@ -135,7 +134,8 @@ class ResNetBackboneBuilder(ModelBuilder):
             x = inputs
             for block in self.blocks:
                 for layer in block:
-                    x = layer(x, training=training, mask=mask)
+                    prev_x = x
+                    x = layer(prev_x, training=training, mask=mask)
                 endpoints.append(x)
             if self.return_endpoints_on_call:
                 return endpoints
@@ -151,8 +151,8 @@ class ResNetBackboneBuilder(ModelBuilder):
             # note that first down block without stride
             block = [self.resnet_down_block_builder.build(filters=filters,
                                                           stride=self.down_stride if i > 0 else 1)]
-            for _ in range(n):
-                block.append(self.resnet_block_builder.build(filters=filters, stride=1))
+            for j in range(n):
+                block.append(self.resnet_block_builder.build(filters=filters, stride=1, n_stage=i, n_block=j))
             blocks_sequence.append(block)
             filters *= 2
         return self.ResNetBackbone(blocks_sequence, return_endpoints_on_call=return_endpoints_on_call)

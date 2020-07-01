@@ -31,8 +31,8 @@ def val_preprocess(sample):
 def augmentation_transform(image):
     # Train data input pipeline mainly from paper xResNet, but without PCA color augmentation
     image = resize_by_shorter_size(image, (256, 480))
-    image = tf.image.random_flip_left_right(image)
     image = random_crop_and_resize(image, (IMG_SIZE, IMG_SIZE), (0.08, 1), (3/4, 4/3))
+    image = tf.image.random_flip_left_right(image)
     image = tf.image.random_hue(image, 0.4)
     image = tf.image.random_saturation(image, 0.6, 1.4)
     image = tf.image.random_brightness(image, 0.4)

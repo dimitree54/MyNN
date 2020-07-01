@@ -40,7 +40,7 @@ class FinalConvBlockBuilder(ModelBuilder):
         return tf.keras.Sequential([
             self.upsampling_block_builder.build(stride=self.stride),
             self.conv_block_builder.build(filters=filters, kernel_size=self.kernel_size, stride=1),
-            self.activation_block_builder.build(),  # TODO make dynamic filters
+            self.activation_block_builder.build(),
             self.conv_block_builder.build(filters=filters, kernel_size=self.kernel_size, stride=1),
             self.activation_block_builder.build(),
             self.conv_block_builder.build(filters=output_filters, kernel_size=self.kernel_size, stride=self.stride)

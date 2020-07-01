@@ -3,7 +3,8 @@ import os
 import tensorflow as tf
 from tqdm import tqdm
 
-from datasets.imagenette import get_data
+from datasets.imagenette import get_data_raw, val_preprocess, restore, resize_crop_augmentation, \
+    parametrized_augmentation_transform, parametrized_extra_augmentation_transform, preprocess, SHUFFLE_BUFFER_SIZE
 from misc.callbacks import add_warm_up_to_lr
 from models.architectures.decoders import get_x_resnet50_decoder
 from models.architectures.xresnet import get_x_resnet50_backbone
@@ -23,14 +24,51 @@ class LrGetter:
         self.lr.assign(self.fn(epoch))
 
 
+def scale_data(data, new_min, new_max):
+    current_min = tf.reduce_min(data)
+    current_max = tf.reduce_max(data)
+    x_normed = (data - current_min) / (current_max - current_min)
+    x_normed = x_normed * (new_max - new_min) + new_min
+    return x_normed
+
+
+def resize_crop_augmentation_wrapper(sample):
+    image = sample['image']
+    label = sample['label']
+    image = resize_crop_augmentation(image)
+    return {'image': image, 'label': label}
+
+
 def train(epochs):
     ckpt.restore(manager.latest_checkpoint)
     for epoch in tqdm(range(int(step.numpy()), epochs)):
         lr_getter.set_epoch(epoch)
         for train_batch in train_batches:
-            train_step(train_batch)
+            image = train_batch['image']
+            label = train_batch['label']
+            label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
+            image = parametrized_augmentation_transform(image, aug_strength)
+            image = parametrized_extra_augmentation_transform(image, aug_strength)
+            image = preprocess(image)
+            train_step((image, label))
+
+        with train_summary_writer.as_default():
+            tf.summary.scalar("aug_strength", aug_strength, epoch)
+            for train_batch in train_batches.take(1):
+                image = train_batch['image']
+                image = parametrized_augmentation_transform(image, aug_strength)
+                # image = parametrized_extra_augmentation_transform(image, aug_strength)
+                image = preprocess(image)
+                endpoints = xresnet_backbone(image)
+                feedback = decoder(endpoints)
+                tf.summary.image("aug_example", restore(image), epoch, 3)
+                tf.summary.image("feedback", scale_data(feedback, 0, 255), epoch, 3)
 
         class_acc.assign(class_metrics[0].result())
+        if class_metrics[0].result() > 0.5:
+            aug_strength.assign(tf.clip_by_value(tf.add(aug_strength, 0.1), 0, 1))
+        else:
+            aug_strength.assign(tf.clip_by_value(tf.subtract(aug_strength, 0.1), 0, 1))
 
         with train_summary_writer.as_default():
             for class_metric in class_metrics:
@@ -85,8 +123,8 @@ def train_step(train_batch):
     class_true_label = tf.argmax(train_batch[1], -1)
     class_correct = tf.cast(class_pred_label == class_true_label, tf.float32)
 
-    weight_for_0 = (1 - class_acc) / 2.0
-    weight_for_1 = class_acc / 2.0
+    weight_for_0 = tf.divide(tf.subtract(1.0, class_acc), 2.0)
+    weight_for_1 = tf.divide(class_acc, 2.0)
     loss_weights = class_correct * weight_for_1 + (1 - class_correct) * weight_for_0
 
     with tf.GradientTape() as tape:
@@ -115,7 +153,7 @@ def train_step(train_batch):
 if __name__ == "__main__":
     nf = 64
     bs = 16
-    name = "x_resnet50_disc"
+    name = "x_resnet50_disc_aug"
 
     xresnet_backbone = get_x_resnet50_backbone(nf, return_endpoints_on_call=True)
     head = ClassificationHeadBuilder().build(10)
@@ -123,7 +161,12 @@ if __name__ == "__main__":
     disc_backbone = get_x_resnet50_backbone(nf)
     disc_head = ClassificationHeadBuilder().build(1)
 
-    train_batches, validation_batches = get_data(bs)
+    aug_strength = tf.Variable(0.0, trainable=False)
+    train_batches, validation_batches = get_data_raw(bs)
+    train_batches = train_batches.map(resize_crop_augmentation_wrapper)
+    validation_batches = validation_batches.map(val_preprocess)
+    train_batches = train_batches.shuffle(SHUFFLE_BUFFER_SIZE).batch(bs).prefetch(tf.data.experimental.AUTOTUNE)
+    validation_batches = validation_batches.batch(bs).prefetch(tf.data.experimental.AUTOTUNE)
 
     lr_getter = LrGetter(add_warm_up_to_lr(10, tf.keras.experimental.CosineDecay(0.1, 200)))
     optimizer1 = tf.keras.optimizers.SGD(learning_rate=lr_getter.lr, momentum=0.9)
@@ -142,10 +185,9 @@ if __name__ == "__main__":
     class_acc = tf.Variable(0.5)
     step = tf.Variable(0)
     ckpt = tf.train.Checkpoint(step=step, optimizer1=optimizer1, optimizer2=optimizer2,
-                               xresnet_backbone=xresnet_backbone, class_acc=class_acc,
+                               xresnet_backbone=xresnet_backbone, class_acc=class_acc, aug_strength=aug_strength,
                                head=head, decoder=decoder, disc_backbone=disc_backbone, disc_head=disc_head)
     manager = tf.train.CheckpointManager(ckpt, os.path.join(name, 'ckpt'), max_to_keep=3)
 
     train(epochs=200)
     # TODO export (not only classifier backbone, but all models)
-    # TODO add feedback images summary saving.

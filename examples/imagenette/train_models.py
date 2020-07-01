@@ -192,7 +192,7 @@ def train_xge_resnext50():
     xresnet_backbone.save(backbone_export_path, include_optimizer=False)
 
 
-def train_nl_resnet50():  # TODO not trained
+def train_nl_resnet50():
     nf = 64
     bs = 32
     name = "nl_resnet50"

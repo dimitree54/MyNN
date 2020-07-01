@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 from data.augmantations import random_crop_and_resize
+from datasets.augmentations import add_gaussian_noise
 
 IMG_SIZE = 128
 SHUFFLE_BUFFER_SIZE = 1000
@@ -15,6 +16,7 @@ def train_preprocess(sample):
     image = sample['image']
     label = sample['label']
     label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
+    image = resize_crop_augmentation(image)
     image = augmentation_transform(image)
     image = preprocess(image)
     return image, label
@@ -29,13 +31,31 @@ def val_preprocess(sample):
     return image, label
 
 
+def resize_crop_augmentation(image):
+    image = random_crop_and_resize(image, (IMG_SIZE, IMG_SIZE), (0.08, 1), (3/4, 4/3))
+    return image
+
+
 def augmentation_transform(image):
+    return parametrized_augmentation_transform(image, 1)
+
+
+def parametrized_augmentation_transform(image, parameter):
     # Train data input pipeline mainly from paper xResNet, but without PCA color augmentation
     image = tf.image.random_flip_left_right(image)
-    image = random_crop_and_resize(image, (IMG_SIZE, IMG_SIZE), (0.08, 1), (3/4, 4/3))
-    image = tf.image.random_hue(image, 0.4)
-    image = tf.image.random_saturation(image, 0.6, 1.4)
-    image = tf.image.random_brightness(image, 0.4)
+
+    amplitude = parameter * 0.4 + 0.000001  # can not be zero
+    image = tf.image.random_hue(image, amplitude)
+    image = tf.image.random_saturation(image, 1 - amplitude, 1 + amplitude)
+    image = tf.image.random_brightness(image, amplitude)
+    return image
+
+
+def parametrized_extra_augmentation_transform(image, parameter):
+    amplitude = parameter * 0.4 + 0.000001  # can not be zero
+    image = tf.image.random_contrast(image, 1 - amplitude, 1 + amplitude)
+    image = tf.map_fn(lambda img: tf.image.random_jpeg_quality(img, tf.cast(1 - amplitude, tf.int32) * 100, 100), image)
+    image = add_gaussian_noise(image, parameter * 0.1 * 255)
     return image
 
 
@@ -74,10 +94,18 @@ def get_data(batch_size, draw_examples=False):
     return train_batches, validation_batches
 
 
+def get_data_raw(batch_size):
+    # Construct a tf.data.Dataset
+    raw_train, info = tensorflow_datasets.load('imagenette/160px', split='train', with_info=True)  # 12,894
+    raw_validation = tensorflow_datasets.load('imagenette/160px', split='validation')  # 500
+
+    return raw_train, raw_validation
+
+
 def draw(data_batches, info, n=3):
     import matplotlib.pyplot as plt
     for sample in data_batches.take(n):
         image = restore(sample[0])[0]
         plt.imshow(image)
         plt.show()
-        print(info.features["label"].int2str(sample[1][0]))
+        print(info.features["label"].int2str(tf.argmax(sample[1][0])))

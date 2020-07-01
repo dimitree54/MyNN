@@ -11,5 +11,5 @@ class BlockWithPostAttentionBuilder(ModelBuilder):
     def build(self, filters, stride=1, **kwargs) -> tf.keras.Model:
         return tf.keras.Sequential([
             self.main_block_builder.build(filters=filters, stride=stride, **kwargs),
-            self.attention_block_builder.build(**kwargs)
+            self.attention_block_builder.build(filters=filters, stride=stride, **kwargs)
         ], **kwargs)

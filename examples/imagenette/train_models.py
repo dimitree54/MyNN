@@ -66,7 +66,7 @@ def train_se_resnet50():
     resnet_backbone.save(backbone_export_path, include_optimizer=False)
 
 
-def train_ge_resnet50():  # TODO not trained
+def train_ge_resnet50():
     nf = 64
     bs = 32
     name = "ge_resnet50"
@@ -156,7 +156,7 @@ def train_xse_resnext50():
     xresnet_backbone.save(backbone_export_path, include_optimizer=False)
 
 
-def train_xge_resnet50():  # TODO not trained
+def train_xge_resnet50():
     nf = 64
     bs = 32
     name = "xge_resnet50"
@@ -174,7 +174,7 @@ def train_xge_resnet50():  # TODO not trained
     xresnet_backbone.save(backbone_export_path, include_optimizer=False)
 
 
-def train_xge_resnext50():  # TODO not trained
+def train_xge_resnext50():
     nf = 64
     bs = 32
     name = "xge_resnext50"

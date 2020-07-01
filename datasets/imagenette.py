@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 from data.augmantations import random_crop_and_resize
+from datasets.augmentations import add_gaussian_noise
 
 IMG_SIZE = 128
 SHUFFLE_BUFFER_SIZE = 1000
@@ -20,6 +21,15 @@ def train_preprocess(sample):
     return image, label
 
 
+def parametrized_train_preprocess(sample, parameter):
+    image = sample['image']
+    label = sample['label']
+    label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
+    image = parametrized_extra_augmentation_transform(image, parameter)
+    image = preprocess(image)
+    return image, label
+
+
 def val_preprocess(sample):
     image = sample['image']
     label = sample['label']
@@ -30,12 +40,33 @@ def val_preprocess(sample):
 
 
 def augmentation_transform(image):
+    return parametrized_augmentation_transform(image, 1)
+
+
+def parametrized_augmentation_transform(image, parameter):
     # Train data input pipeline mainly from paper xResNet, but without PCA color augmentation
     image = tf.image.random_flip_left_right(image)
     image = random_crop_and_resize(image, (IMG_SIZE, IMG_SIZE), (0.08, 1), (3/4, 4/3))
-    image = tf.image.random_hue(image, 0.4)
-    image = tf.image.random_saturation(image, 0.6, 1.4)
-    image = tf.image.random_brightness(image, 0.4)
+
+    amplitude = parameter * 0.4
+    image = tf.image.random_hue(image, amplitude)
+    image = tf.image.random_saturation(image, 1 - amplitude, 1 + amplitude)
+    image = tf.image.random_brightness(image, amplitude)
+    return image
+
+
+def parametrized_extra_augmentation_transform(image, parameter):
+    # Train data input pipeline mainly from paper xResNet, but without PCA color augmentation
+    image = tf.image.random_flip_left_right(image)
+    image = random_crop_and_resize(image, (IMG_SIZE, IMG_SIZE), (0.08, 1), (3/4, 4/3))
+
+    amplitude = parameter * 0.4
+    image = tf.image.random_hue(image, amplitude)
+    image = tf.image.random_saturation(image, 1 - amplitude, 1 + amplitude)
+    image = tf.image.random_brightness(image, amplitude)
+    image = tf.image.random_contrast(image, 1 - amplitude, 1 + amplitude)
+    image = tf.image.random_jpeg_quality(image, (1 - amplitude) * 100, 100)
+    image = add_gaussian_noise(image, parameter * 0.1 * 255)
     return image
 
 
@@ -71,6 +102,17 @@ def get_data(batch_size, draw_examples=False):
     if draw_examples:
         draw(train_batches, info)
         draw(validation_batches, info)
+    return train_batches, validation_batches
+
+
+def get_data_raw(batch_size):
+    # Construct a tf.data.Dataset
+    raw_train, info = tensorflow_datasets.load('imagenette/160px', split='train', with_info=True)  # 12,894
+    raw_validation = tensorflow_datasets.load('imagenette/160px', split='validation')  # 500
+
+    train_batches = raw_train.shuffle(SHUFFLE_BUFFER_SIZE).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+    validation_batches = raw_validation.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+
     return train_batches, validation_batches
 
 

@@ -2,7 +2,6 @@
 https://arxiv.org/pdf/1810.12348.pdf
 
 Here implemented only block with best performance (but most computationally expensive) GEBlockThetaPlus
-TODO not trained
 """
 from models.architectures.resnet import ConvBnBuilder
 from models.base_classes import ModelBuilder, ReLUBuilder, SigmoidBuilder

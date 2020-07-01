@@ -3,8 +3,8 @@ import os
 import tensorflow as tf
 from tqdm import tqdm
 
-from datasets.imagenette import get_data_raw, val_preprocess, \
-    parametrized_train_preprocess, restore
+from datasets.imagenette import get_data_raw, val_preprocess, restore, resize_crop_augmentation, \
+    parametrized_augmentation_transform, parametrized_extra_augmentation_transform, preprocess, SHUFFLE_BUFFER_SIZE
 from misc.callbacks import add_warm_up_to_lr
 from models.architectures.decoders import get_x_resnet50_decoder
 from models.architectures.xresnet import get_x_resnet50_backbone
@@ -32,28 +32,43 @@ def scale_data(data, new_min, new_max):
     return x_normed
 
 
+def resize_crop_augmentation_wrapper(sample):
+    image = sample['image']
+    label = sample['label']
+    image = resize_crop_augmentation(image)
+    return {'image': image, 'label': label}
+
+
 def train(epochs):
     ckpt.restore(manager.latest_checkpoint)
     for epoch in tqdm(range(int(step.numpy()), epochs)):
         lr_getter.set_epoch(epoch)
         for train_batch in train_batches:
-            train_batch = parametrized_train_preprocess(train_batch, aug_strength)
-            train_step(train_batch)
+            image = train_batch['image']
+            label = train_batch['label']
+            label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
+            image = parametrized_augmentation_transform(image, aug_strength)
+            image = parametrized_extra_augmentation_transform(image, aug_strength)
+            image = preprocess(image)
+            train_step((image, label))
 
         with train_summary_writer.as_default():
             tf.summary.scalar("aug_strength", aug_strength, epoch)
             for train_batch in train_batches.take(1):
-                train_batch = parametrized_train_preprocess(train_batch, aug_strength)
-                endpoints = xresnet_backbone(train_batch[0])
+                image = train_batch['image']
+                image = parametrized_augmentation_transform(image, aug_strength)
+                # image = parametrized_extra_augmentation_transform(image, aug_strength)
+                image = preprocess(image)
+                endpoints = xresnet_backbone(image)
                 feedback = decoder(endpoints)
-                tf.summary.image("aug_example", restore(train_batch[0]), epoch, 3)
+                tf.summary.image("aug_example", restore(image), epoch, 3)
                 tf.summary.image("feedback", scale_data(feedback, 0, 255), epoch, 3)
 
         class_acc.assign(class_metrics[0].result())
         if class_metrics[0].result() > 0.5:
-            aug_strength.assign(tf.clip_by_value(aug_strength + 0.1, 0, 1))
+            aug_strength.assign(tf.clip_by_value(tf.add(aug_strength, 0.1), 0, 1))
         else:
-            aug_strength.assign(tf.clip_by_value(aug_strength - 0.1, 0, 1))
+            aug_strength.assign(tf.clip_by_value(tf.subtract(aug_strength, 0.1), 0, 1))
 
         with train_summary_writer.as_default():
             for class_metric in class_metrics:
@@ -138,7 +153,7 @@ def train_step(train_batch):
 if __name__ == "__main__":
     nf = 64
     bs = 16
-    name = "x_resnet50_disc"
+    name = "x_resnet50_disc_aug"
 
     xresnet_backbone = get_x_resnet50_backbone(nf, return_endpoints_on_call=True)
     head = ClassificationHeadBuilder().build(10)
@@ -148,7 +163,10 @@ if __name__ == "__main__":
 
     aug_strength = tf.Variable(0.0, trainable=False)
     train_batches, validation_batches = get_data_raw(bs)
+    train_batches = train_batches.map(resize_crop_augmentation_wrapper)
     validation_batches = validation_batches.map(val_preprocess)
+    train_batches = train_batches.shuffle(SHUFFLE_BUFFER_SIZE).batch(bs).prefetch(tf.data.experimental.AUTOTUNE)
+    validation_batches = validation_batches.batch(bs).prefetch(tf.data.experimental.AUTOTUNE)
 
     lr_getter = LrGetter(add_warm_up_to_lr(10, tf.keras.experimental.CosineDecay(0.1, 200)))
     optimizer1 = tf.keras.optimizers.SGD(learning_rate=lr_getter.lr, momentum=0.9)
@@ -173,4 +191,3 @@ if __name__ == "__main__":
 
     train(epochs=200)
     # TODO export (not only classifier backbone, but all models)
-    # TODO add feedback images summary saving.

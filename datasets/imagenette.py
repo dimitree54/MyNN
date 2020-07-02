@@ -54,7 +54,7 @@ def parametrized_augmentation_transform(image, parameter):
 def parametrized_extra_augmentation_transform(image, parameter):
     amplitude = parameter * 0.4 + 0.000001  # can not be zero
     image = tf.image.random_contrast(image, 1 - amplitude, 1 + amplitude)
-    image = tf.map_fn(lambda img: tf.image.random_jpeg_quality(img, tf.cast(1 - amplitude, tf.int32) * 100, 100), image)
+    # image = tf.map_fn(lambda img: tf.image.random_jpeg_quality(img, tf.cast((1 - amplitude) * 100, tf.int32), 100), image)
     image = add_gaussian_noise(image, parameter * 0.1 * 255)
     return image
 

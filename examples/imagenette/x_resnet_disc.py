@@ -57,7 +57,7 @@ def train(epochs):
             for train_batch in train_batches.take(1):
                 image = train_batch['image']
                 image = parametrized_augmentation_transform(image, aug_strength)
-                # image = parametrized_extra_augmentation_transform(image, aug_strength)
+                image = parametrized_extra_augmentation_transform(image, aug_strength)
                 image = preprocess(image)
                 endpoints = xresnet_backbone(image)
                 feedback = decoder(endpoints)

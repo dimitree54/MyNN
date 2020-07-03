@@ -53,8 +53,6 @@ def train(epochs):
             train_class_step((image, label))
             # hard samples
             image = train_batch['image']
-            label = train_batch['label']
-            label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
             image = parametrized_augmentation_transform(image, aug_strength)
             image = parametrized_extra_augmentation_transform(image, aug_strength)
             image = preprocess(image)

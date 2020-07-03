@@ -44,13 +44,21 @@ def train(epochs):
     for epoch in tqdm(range(int(step.numpy()), epochs)):
         lr_getter.set_epoch(epoch)
         for train_batch in train_batches:
+            label = train_batch['label']
+            label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
+            # normal samples
+            image = train_batch['image']
+            image = parametrized_augmentation_transform(image, 1)
+            image = preprocess(image)
+            train_class_step((image, label))
+            # hard samples
             image = train_batch['image']
             label = train_batch['label']
             label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
             image = parametrized_augmentation_transform(image, aug_strength)
             image = parametrized_extra_augmentation_transform(image, aug_strength)
             image = preprocess(image)
-            train_step((image, label))
+            train_disc_step((image, label))
 
         with train_summary_writer.as_default():
             tf.summary.scalar("aug_strength", aug_strength, epoch)
@@ -64,11 +72,10 @@ def train(epochs):
                 tf.summary.image("aug_example", restore(image), epoch, 3)
                 tf.summary.image("feedback", scale_data(feedback, 0, 255), epoch, 3)
 
-        class_acc.assign(class_metrics[0].result())
-        if class_metrics[0].result() > 0.5:
-            aug_strength.assign(tf.clip_by_value(tf.add(aug_strength, 0.1), 0, 1))
+        if class_accuracy_on_hard_samples.result() > 0.5:
+            aug_strength.assign(tf.clip_by_value(tf.add(aug_strength, 0.1), 0, 4))
         else:
-            aug_strength.assign(tf.clip_by_value(tf.subtract(aug_strength, 0.1), 0, 1))
+            aug_strength.assign(tf.clip_by_value(tf.subtract(aug_strength, 0.1), 0, 4))
 
         with train_summary_writer.as_default():
             for class_metric in class_metrics:
@@ -77,6 +84,8 @@ def train(epochs):
             for disc_metric in disc_metrics:
                 tf.summary.scalar(disc_metric.name, disc_metric.result(), epoch)
                 disc_metric.reset_states()
+            tf.summary.scalar("class_accuracy_on_hard_samples", class_accuracy_on_hard_samples.result(), epoch)
+            class_accuracy_on_hard_samples.reset_states()
             tf.summary.scalar("lr", lr_getter.lr, epoch)
 
         for val_batch in validation_batches:
@@ -111,7 +120,7 @@ def val_step(val_batch):
 
 
 @tf.function
-def train_step(train_batch):
+def train_class_step(train_batch):
     with tf.GradientTape() as tape:
         endpoints = xresnet_backbone(train_batch[0], training=True)
         class_logits = head(endpoints[-1], training=True)
@@ -119,13 +128,18 @@ def train_step(train_batch):
     class_gradients = tape.gradient(class_loss, xresnet_backbone.trainable_variables + head.trainable_variables)
     optimizer1.apply_gradients(zip(class_gradients, xresnet_backbone.trainable_variables + head.trainable_variables))
 
+    for class_metric in class_metrics:
+        class_metric.update_state(train_batch[1], class_logits)
+
+
+@tf.function
+def train_disc_step(train_batch):
+    endpoints = xresnet_backbone(train_batch[0], training=True)
+    class_logits = head(endpoints[-1], training=True)
+
     class_pred_label = tf.argmax(class_logits, -1)
     class_true_label = tf.argmax(train_batch[1], -1)
     class_correct = tf.cast(class_pred_label == class_true_label, tf.float32)
-
-    weight_for_0 = tf.divide(tf.subtract(1.0, class_acc), 2.0)
-    weight_for_1 = tf.divide(class_acc, 2.0)
-    loss_weights = class_correct * weight_for_1 + (1 - class_correct) * weight_for_0
 
     with tf.GradientTape() as tape:
         feedback = decoder(endpoints, training=True)
@@ -136,18 +150,14 @@ def train_step(train_batch):
 
         # for proper weighting we can not use tensorflow losses (because it reduces batch dimension, so
         # we calculate binary cross-entropy manually:
-        disc_loss = (class_correct * tf.math.log(disc_prediction + 0.000001)) + \
-                    ((1 - class_correct) * tf.math.log(1 - disc_prediction + 0.000001))
-        disc_loss = -tf.reduce_mean(disc_loss * loss_weights)
+        disc_loss = disc_loss_obj(class_correct, disc_prediction)
     disc_gradient = tape.gradient(disc_loss, decoder.trainable_variables + disc_backbone.trainable_variables +
                                   disc_head.trainable_variables)
     optimizer2.apply_gradients(zip(disc_gradient, decoder.trainable_variables +
                                    disc_backbone.trainable_variables + disc_head.trainable_variables))
-
-    for class_metric in class_metrics:
-        class_metric.update_state(train_batch[1], class_logits)
     for disc_metric in disc_metrics:
         disc_metric.update_state(class_correct, disc_prediction)
+    class_accuracy_on_hard_samples.update_state(train_batch[1], class_logits)
 
 
 if __name__ == "__main__":
@@ -162,7 +172,7 @@ if __name__ == "__main__":
     disc_head = ClassificationHeadBuilder().build(1)
 
     aug_strength = tf.Variable(0.0, trainable=False)
-    train_batches, validation_batches = get_data_raw(bs)
+    train_batches, validation_batches = get_data_raw()
     train_batches = train_batches.map(resize_crop_augmentation_wrapper)
     validation_batches = validation_batches.map(val_preprocess)
     train_batches = train_batches.shuffle(SHUFFLE_BUFFER_SIZE).batch(bs).prefetch(tf.data.experimental.AUTOTUNE)
@@ -172,20 +182,21 @@ if __name__ == "__main__":
     optimizer1 = tf.keras.optimizers.SGD(learning_rate=lr_getter.lr, momentum=0.9)
     optimizer2 = tf.keras.optimizers.SGD(learning_rate=lr_getter.lr, momentum=0.9)
     class_loss_obj = tf.keras.losses.CategoricalCrossentropy(from_logits=True, label_smoothing=0.1)
+    disc_loss_obj = tf.keras.losses.BinaryCrossentropy()
 
     # call metrics and write to summary
     class_metrics = [tf.keras.metrics.CategoricalAccuracy(),
                      tf.keras.metrics.CategoricalCrossentropy(from_logits=True, label_smoothing=0.1)]
+    class_accuracy_on_hard_samples = tf.keras.metrics.CategoricalAccuracy()
     disc_metrics = [tf.keras.metrics.BinaryAccuracy(), tf.keras.metrics.BinaryCrossentropy(),
                     tf.keras.metrics.TruePositives(), tf.keras.metrics.TrueNegatives(),
                     tf.keras.metrics.FalsePositives(), tf.keras.metrics.FalseNegatives()]
     train_summary_writer = tf.summary.create_file_writer(os.path.join(name, "train"))
     val_summary_writer = tf.summary.create_file_writer(os.path.join(name, "val"))
 
-    class_acc = tf.Variable(0.5)
     step = tf.Variable(0)
     ckpt = tf.train.Checkpoint(step=step, optimizer1=optimizer1, optimizer2=optimizer2,
-                               xresnet_backbone=xresnet_backbone, class_acc=class_acc, aug_strength=aug_strength,
+                               xresnet_backbone=xresnet_backbone, aug_strength=aug_strength,
                                head=head, decoder=decoder, disc_backbone=disc_backbone, disc_head=disc_head)
     manager = tf.train.CheckpointManager(ckpt, os.path.join(name, 'ckpt'), max_to_keep=3)
 

@@ -46,7 +46,7 @@ def parametrized_augmentation_transform(image, parameter):
 
     amplitude = parameter * 0.4 + 0.000001  # can not be zero
     image = tf.image.random_hue(image, tf.clip_by_value(amplitude, 0, 0.5))
-    image = tf.image.random_saturation(image, 1 - amplitude, 1 + amplitude)
+    image = tf.image.random_saturation(image, max(0, 1 - amplitude), min(2, 1 + amplitude))
     image = tf.image.random_brightness(image, amplitude)
     return image
 

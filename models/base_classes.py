@@ -7,7 +7,7 @@ from tensorflow.keras import Model
 class ModelBuilder(ABC):
     @abstractmethod
     def build(self, **kwargs) -> Model:
-        pass
+        pass  # TODO is there some problems with using Model as building block? Maybe use layer instead? Compare it.
 
 
 class ReLUBuilder(ModelBuilder):
@@ -49,6 +49,20 @@ class GlobalAvgPoolBuilder(ModelBuilder):
     def build(self, **kwargs) -> Model:
         return tf.keras.Sequential([
             tf.keras.layers.GlobalAvgPool2D()
+        ], **kwargs)
+
+
+class BatchNormBuilder(ModelBuilder):
+    def build(self, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.BatchNormalization()
+        ], **kwargs)
+
+
+class LayerNormBuilder(ModelBuilder):
+    def build(self, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            tf.keras.layers.LayerNormalization()
         ], **kwargs)
 
 

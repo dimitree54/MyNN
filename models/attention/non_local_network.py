@@ -96,14 +96,11 @@ class NonLocalBlockBuilder(ModelBuilder):
 
 
 class ResNonLocalBlockBuilder(ResNetIdentityBlockBuilder):
-    def __init__(self, embedding_block_builder: ModelBuilder = Conv1x1Builder(),
-                 pooling_block_builder: ModelBuilder = MaxPoolBuilder(),
-                 attention_activation_block_builder: ModelBuilder = SoftmaxBuilder(),
+    def __init__(self, non_local_block_builder: ModelBuilder = NonLocalBlockBuilder(),
                  aggregation_block_builder: ModelBuilder = SumBlockBuilder(),
                  activation_block_builder: ModelBuilder = IdentityBlockBuilder()):
         super().__init__(
-            conv_block_builder=NonLocalBlockBuilder(embedding_block_builder, pooling_block_builder,
-                                                    attention_activation_block_builder),
+            conv_block_builder=non_local_block_builder,
             aggregation_block_builder=aggregation_block_builder, activation_block_builder=activation_block_builder)
 
 

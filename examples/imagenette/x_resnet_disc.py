@@ -68,12 +68,12 @@ def train(epochs):
                 endpoints = xresnet_backbone(image)
                 feedback = decoder(endpoints)
                 tf.summary.image("aug_example", restore(image), epoch, 3)
-                tf.summary.image("feedback", scale_data(feedback, 0, 255), epoch, 3)
+                tf.summary.image("feedback", scale_data(feedback, 0, 1), epoch, 3)
 
         if class_accuracy_on_hard_samples.result() > 0.5:
-            aug_strength.assign(tf.clip_by_value(tf.add(aug_strength, 0.1), 0, 4))
+            aug_strength.assign(tf.clip_by_value(tf.add(aug_strength, 0.1), 0, 2))
         else:
-            aug_strength.assign(tf.clip_by_value(tf.subtract(aug_strength, 0.1), 0, 4))
+            aug_strength.assign(tf.clip_by_value(tf.subtract(aug_strength, 0.1), 0, 2))
 
         with train_summary_writer.as_default():
             for class_metric in class_metrics:
@@ -200,3 +200,5 @@ if __name__ == "__main__":
 
     train(epochs=200)
     # TODO export (not only classifier backbone, but all models)
+    # TODO we are trying to repeat normal classification for class_backbone + head, and applying modifications only to
+    #  discriminator, but somehow validation accuracy not stable (compared to classical setting). where the difference

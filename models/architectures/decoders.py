@@ -116,3 +116,22 @@ def get_x_resnet50_decoder(nf):
             )
         )
     ).build(nf, [2, 3, 5, 2], 3)
+
+
+def get_resnet18_decoder(nf):
+    return DecoderWithShortcutsBuilder(
+        main_block_builder=ResNetIdentityBlockBuilder(
+            conv_block_builder=ResNetBottleNeckBlockBuilder(
+                conv_builder=UpsampleConvBnBuilder()
+            )
+        ),
+        up_block_builder=ResNetProjectionDownBlockBuilder(
+            conv_block_builder=ResNetBottleNeckBlockBuilder(
+                conv_builder=UpsampleConvBnBuilder()
+            ),
+            projection_block_builder=ResNetProjectionDownBlockBuilder(
+                conv_block_builder=UpsampleConvBnBuilder(),
+                projection_block_builder=UpsampleConvBnBuilder()
+            )
+        )
+    ).build(nf, [1, 1, 1, 1], 3)

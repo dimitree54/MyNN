@@ -145,3 +145,15 @@ class ClassificationModel(Model):
         x = self.backbone(inputs, training=training, mask=mask)
         x = self.head(x, training=training, mask=mask)
         return x
+
+
+class GeneratorModel(Model):
+    def __init__(self, encoder: Model, decoder: Model, **kwargs):
+        super().__init__(**kwargs)
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def call(self, inputs, training=None, mask=None):
+        endpoints = self.encoder(inputs, training=training, mask=mask)
+        x = self.decoder(endpoints, training=training, mask=mask)
+        return x

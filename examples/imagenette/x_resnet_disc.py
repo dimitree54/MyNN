@@ -65,8 +65,8 @@ def train(epochs):
                 image = parametrized_augmentation_transform(image, aug_strength)
                 image = parametrized_extra_augmentation_transform(image, aug_strength)
                 image = preprocess(image)
-                endpoints = xresnet_backbone(image)
-                feedback = decoder(endpoints)
+                endpoints = xresnet_backbone(image, training=False)
+                feedback = decoder(endpoints, training=False)
                 tf.summary.image("aug_example", restore(image), epoch, 3)
                 tf.summary.image("feedback", scale_data(feedback, 0, 1), epoch, 3)
 

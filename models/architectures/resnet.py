@@ -162,7 +162,7 @@ def get_resnet18_backbone(nf):
     return ResNetBackboneBuilder().build(nf, [1, 1, 1, 1], return_endpoints_on_call=False)
 
 
-def get_resnet18_with_bottleneck_backbone(nf):
+def get_resnet18_with_bottleneck_backbone(nf, return_endpoints_on_call=False):
     main_resnet_block = ResNetBottleNeckBlockBuilder()
     return ResNetBackboneBuilder(
         resnet_block_builder=ResNetIdentityBlockBuilder(
@@ -171,7 +171,7 @@ def get_resnet18_with_bottleneck_backbone(nf):
         resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=main_resnet_block
         )
-    ).build(nf, [1, 1, 1, 1], return_endpoints_on_call=False)
+    ).build(nf, [1, 1, 1, 1], return_endpoints_on_call=return_endpoints_on_call)
 
 
 def get_resnet34_backbone(nf):

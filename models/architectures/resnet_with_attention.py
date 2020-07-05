@@ -1,3 +1,4 @@
+from models.architectures.global_context import ResGCBlockBuilder
 from models.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
     ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
 from models.architectures.xresnet import XResNetInitialConvBlockBuilder, XResNeXtBlockBuilderB, \
@@ -115,6 +116,32 @@ def get_xnl_resnet50_backbone(nf):
             conv_block_builder=AttentionInSpecifiedResNetLocations(
                 locations=[(1, 0), (1, 2), (2, 0), (2, 2), (2, 4)],
                 main_block_builder=ResNetBottleNeckBlockBuilder(), attention_block_builder=ResNonLocalBlockBuilder())
+        ),
+        resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
+            conv_block_builder=XResNetDBottleneckBlock(),
+            projection_block_builder=XResNetDProjectionBlock()
+        )
+    ).build(nf, [2, 3, 5, 2], return_endpoints_on_call=False)
+
+
+def get_gc_resnet50_backbone(nf):  # non-local attention
+    return ResNetBackboneBuilder(
+        resnet_block_builder=ResNetIdentityBlockBuilder(
+            conv_block_builder=BlockWithPostAttentionBuilder(
+                main_block_builder=ResNetBottleNeckBlockBuilder(), attention_block_builder=ResGCBlockBuilder())
+        ),
+        resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
+            conv_block_builder=ResNetBottleNeckBlockBuilder()
+        )
+    ).build(nf, [2, 3, 5, 2], return_endpoints_on_call=False)
+
+
+def get_xgc_resnet50_backbone(nf):
+    return ResNetBackboneBuilder(
+        init_conv_builder=XResNetInitialConvBlockBuilder(),
+        resnet_block_builder=ResNetIdentityBlockBuilder(
+            conv_block_builder=BlockWithPostAttentionBuilder(
+                main_block_builder=ResNetBottleNeckBlockBuilder(), attention_block_builder=ResGCBlockBuilder())
         ),
         resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=XResNetDBottleneckBlock(),

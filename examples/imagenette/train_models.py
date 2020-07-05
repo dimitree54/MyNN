@@ -210,7 +210,7 @@ def train_nl_resnet50():
     resnet_backbone.save(backbone_export_path, include_optimizer=False)
 
 
-def train_xnl_resnet50():  # TODO not trained
+def train_xnl_resnet50():
     nf = 64
     bs = 32
     name = "xnl_resnet50"

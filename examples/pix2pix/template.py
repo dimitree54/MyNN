@@ -3,23 +3,39 @@ import os
 import tensorflow as tf
 from tqdm import tqdm
 
-from datasets.imagenette import get_data, restore
-from models.architectures.decoders import get_resnet18_decoder
+from datasets.imagenette import get_data, restore, get_data_raw, val_preprocess, resize_crop_augmentation, \
+    parametrized_augmentation_transform, preprocess
+from models.architectures.decoders import get_resnet18_decoder, get_resnet18_decoder_transposed
 from models.architectures.resnet import get_resnet18_with_bottleneck_backbone
 from models.base_classes import GeneratorModel
 
 
+def train_preprocess(sample):
+    image = sample['image']
+    label = sample['label']
+    label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
+    image = resize_crop_augmentation(image)
+    image = parametrized_augmentation_transform(image, 0.25)
+    image = preprocess(image)
+    return image, label
+
+
 def train_resnet18():
-    nf = 16
-    bs = 2
-    name = "resnet18"
+    nf = 64
+    bs = 16
+    name = "resnet18_transposed"
 
     resnet_backbone = get_resnet18_with_bottleneck_backbone(nf, True)
-    decoder = get_resnet18_decoder(nf)
+    decoder = get_resnet18_decoder_transposed(nf)
     generator = GeneratorModel(resnet_backbone, decoder)
     discriminator = get_resnet18_with_bottleneck_backbone(nf)
 
-    train_batches, validation_batches = get_data(bs)
+    # default aug for classification too hard for color restoration
+    train_batches, validation_batches = get_data_raw()
+    train_batches = train_batches.map(train_preprocess)
+    validation_batches = validation_batches.map(val_preprocess)
+    train_batches = train_batches.shuffle(1000).batch(bs).prefetch(tf.data.experimental.AUTOTUNE)
+    validation_batches = validation_batches.batch(bs).prefetch(tf.data.experimental.AUTOTUNE)
 
     train(generator, discriminator, name, train_batches, validation_batches)
 
@@ -30,10 +46,14 @@ def grayscale(images_batch):
 
 def train(generator, discriminator, name, train_batches, validation_batches, epochs=200):
     metrics = {
+        "gen_loss_from_disc": tf.keras.metrics.Mean(),
+        "gen_l1_loss": tf.keras.metrics.Mean(),
         "total_gen_loss": tf.keras.metrics.Mean(),
         "disc_real_loss": tf.keras.metrics.Mean(),
         "disc_generated_loss": tf.keras.metrics.Mean(),
-        "total_disc_loss": tf.keras.metrics.Mean()
+        "total_disc_loss": tf.keras.metrics.Mean(),
+        "disc_fake_accuracy": tf.keras.metrics.BinaryAccuracy(),
+        "disc_real_accuracy": tf.keras.metrics.BinaryAccuracy()
     }
     train_summary_writer = tf.summary.create_file_writer(os.path.join(name, "train"))
     val_summary_writer = tf.summary.create_file_writer(os.path.join(name, "val"))
@@ -94,11 +114,13 @@ def train_step(generator, discriminator, input_image, target, metrics):
             disc_real_output = discriminator(tf.concat([input_image, target], -1), training=True)
             disc_generated_output = discriminator(tf.concat([input_image, gen_output], -1), training=True)
 
-            total_gen_loss = loss_object(tf.ones_like(disc_generated_output), disc_generated_output)
+            gen_loss_from_disc = loss_object(tf.ones_like(disc_generated_output), disc_generated_output)
+            gen_l1_loss = tf.reduce_mean(tf.abs(target - gen_output))
+            total_gen_loss = gen_loss_from_disc + (100 * gen_l1_loss)
 
             disc_real_loss = loss_object(tf.ones_like(disc_real_output), disc_real_output)
             disc_generated_loss = loss_object(tf.zeros_like(disc_generated_output), disc_generated_output)
-            total_disc_loss = (disc_real_loss + disc_generated_loss) / 2
+            total_disc_loss = (disc_real_loss + disc_generated_loss)
 
     generator_gradients = gen_tape.gradient(total_gen_loss, generator.trainable_variables)
     discriminator_gradients = disc_tape.gradient(total_disc_loss, discriminator.trainable_variables)
@@ -106,10 +128,14 @@ def train_step(generator, discriminator, input_image, target, metrics):
     generator_optimizer.apply_gradients(zip(generator_gradients, generator.trainable_variables))
     discriminator_optimizer.apply_gradients(zip(discriminator_gradients, discriminator.trainable_variables))
 
+    metrics['gen_loss_from_disc'].update_state(gen_loss_from_disc)
+    metrics['gen_l1_loss'].update_state(gen_l1_loss)
     metrics['total_gen_loss'].update_state(total_gen_loss)
     metrics['disc_real_loss'].update_state(disc_real_loss)
     metrics['disc_generated_loss'].update_state(disc_generated_loss)
     metrics['total_disc_loss'].update_state(total_disc_loss)
+    metrics["disc_fake_accuracy"].update_state(tf.zeros_like(disc_generated_output), disc_generated_output)
+    metrics["disc_real_accuracy"].update_state(tf.ones_like(disc_real_output), disc_real_output)
 
 
 @tf.function
@@ -118,16 +144,22 @@ def val_step(generator, discriminator, input_image, target, metrics):
     disc_real_output = discriminator(tf.concat([input_image, target], -1), training=False)
     disc_generated_output = discriminator(tf.concat([input_image, gen_output], -1), training=False)
 
-    total_gen_loss = loss_object(tf.ones_like(disc_generated_output), disc_generated_output)
+    gen_loss_from_disc = loss_object(tf.ones_like(disc_generated_output), disc_generated_output)
+    gen_l1_loss = tf.reduce_mean(tf.abs(target - gen_output))
+    total_gen_loss = gen_loss_from_disc + (100 * gen_l1_loss)
 
     disc_real_loss = loss_object(tf.ones_like(disc_real_output), disc_real_output)
     disc_generated_loss = loss_object(tf.zeros_like(disc_generated_output), disc_generated_output)
     total_disc_loss = (disc_real_loss + disc_generated_loss) / 2
 
+    metrics['gen_loss_from_disc'].update_state(gen_loss_from_disc)
+    metrics['gen_l1_loss'].update_state(gen_l1_loss)
     metrics['total_gen_loss'].update_state(total_gen_loss)
     metrics['disc_real_loss'].update_state(disc_real_loss)
     metrics['disc_generated_loss'].update_state(disc_generated_loss)
     metrics['total_disc_loss'].update_state(total_disc_loss)
+    metrics["disc_fake_accuracy"].update_state(tf.zeros_like(disc_generated_output), disc_generated_output)
+    metrics["disc_real_accuracy"].update_state(tf.ones_like(disc_real_output), disc_real_output)
 
 
 train_resnet18()

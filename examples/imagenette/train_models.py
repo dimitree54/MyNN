@@ -228,7 +228,7 @@ def train_xnl_resnet50():
     xresnet_backbone.save(backbone_export_path, include_optimizer=False)
 
 
-def train_gc_resnet50():  # TODO not trained
+def train_gc_resnet50():
     nf = 64
     bs = 32
     name = "gc_resnet50"

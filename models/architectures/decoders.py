@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.keras import Model
 
 from models.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetProjectionDownBlockBuilder, \
-    ResNetIdentityBlockBuilder
+    ResNetIdentityBlockBuilder, ConvBnBuilder
 from models.architectures.xresnet import XResNetDBottleneckBlock, XResNetDProjectionBlock
 from models.base_classes import ModelBuilder, ReLUBuilder, UpsampleBilinear, ConcatBlockBuilder
 
@@ -20,6 +20,22 @@ class UpsampleConvBnBuilder(ModelBuilder):
             seq.append(self.upsampling_block_builder.build(stride=stride))
         seq.append(tf.keras.layers.Conv2D(filters, kernel_size, 1, use_bias=False, padding='same',
                                           kernel_regularizer=tf.keras.regularizers.l2(0.0001)))
+        seq.append(tf.keras.layers.BatchNormalization())
+        return tf.keras.Sequential(seq, **kwargs)
+
+
+class TransposedConvBnBuilder(ModelBuilder):
+    def __init__(self):
+        super().__init__()
+
+    def build(self, filters, kernel_size=3, stride=1, **kwargs):
+        seq = []
+        if stride > 1:
+            seq.append(tf.keras.layers.Conv2DTranspose(filters, kernel_size, stride, use_bias=False, padding="same",
+                                                       kernel_regularizer=tf.keras.regularizers.l2(0.0001)))
+        else:
+            seq.append(tf.keras.layers.Conv2D(filters, kernel_size, 1, use_bias=False, padding='same',
+                                              kernel_regularizer=tf.keras.regularizers.l2(0.0001)))
         seq.append(tf.keras.layers.BatchNormalization())
         return tf.keras.Sequential(seq, **kwargs)
 
@@ -45,6 +61,32 @@ class FinalConvBlockBuilder(ModelBuilder):
             self.activation_block_builder.build(),
             self.conv_block_builder.build(filters=output_filters, kernel_size=self.kernel_size, stride=self.stride)
         ], **kwargs)
+
+
+class FinalConvBlockBuilder2(ModelBuilder):
+    kernel_size = 4
+    pool_size = 3
+    stride = 2
+
+    def __init__(self, conv_block_builder: ModelBuilder = ConvBnBuilder(),
+                 activation_block_builder: ModelBuilder = ReLUBuilder(),
+                 upsampling_block_builder: ModelBuilder = UpsampleConvBnBuilder()):
+        self.conv_block_builder = conv_block_builder
+        self.activation_block_builder = activation_block_builder
+        self.upsampling_block_builder = upsampling_block_builder
+
+    def build(self, filters, output_filters, **kwargs) -> Model:
+        return tf.keras.Sequential([
+            self.upsampling_block_builder.build(filters=filters, kernel_size=self.kernel_size, stride=self.stride),
+            self.conv_block_builder.build(filters=filters, kernel_size=self.kernel_size, stride=1),
+            self.activation_block_builder.build(),
+            self.conv_block_builder.build(filters=filters, kernel_size=self.kernel_size, stride=1),
+            self.activation_block_builder.build(),
+            self.upsampling_block_builder.build(filters=filters, kernel_size=self.kernel_size, stride=self.stride),
+            self.activation_block_builder.build(),
+            tf.keras.layers.Conv2D(output_filters, 3, 1, 'same')  # TODO final pure conv (without BN)
+        ], **kwargs)
+
 
 
 class DecoderWithShortcutsBuilder(ModelBuilder):
@@ -134,4 +176,24 @@ def get_resnet18_decoder(nf):
                 projection_block_builder=UpsampleConvBnBuilder()
             )
         )
+    ).build(nf, [1, 1, 1, 1], 3)
+
+
+def get_resnet18_decoder_transposed(nf):
+    return DecoderWithShortcutsBuilder(
+        main_block_builder=ResNetIdentityBlockBuilder(
+            conv_block_builder=ResNetBottleNeckBlockBuilder(
+                conv_builder=TransposedConvBnBuilder()
+            )
+        ),
+        up_block_builder=ResNetProjectionDownBlockBuilder(
+            conv_block_builder=ResNetBottleNeckBlockBuilder(
+                conv_builder=TransposedConvBnBuilder()
+            ),
+            projection_block_builder=ResNetProjectionDownBlockBuilder(
+                conv_block_builder=TransposedConvBnBuilder(),
+                projection_block_builder=TransposedConvBnBuilder()
+            )
+        ),
+        final_conv_builder=FinalConvBlockBuilder2()
     ).build(nf, [1, 1, 1, 1], 3)

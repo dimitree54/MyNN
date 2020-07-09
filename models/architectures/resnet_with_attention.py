@@ -1,4 +1,4 @@
-from models.architectures.global_context import ResGCBlockBuilder
+from models.attention.global_context import ResGCBlockBuilder
 from models.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
     ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
 from models.architectures.xresnet import XResNetInitialConvBlockBuilder, XResNeXtBlockBuilderB, \

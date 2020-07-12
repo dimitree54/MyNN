@@ -1,14 +1,14 @@
 import os
 
-from datasets.imagenette import get_data
+from datasets.images.classification.imagenette import get_data
 from examples.imagenette.template import train
-from models.architectures.resnet import get_resnet50_backbone
-from models.architectures.resnext import get_resnext50_backbone
-from models.architectures.resnet_with_attention import get_ge_resnet50_backbone, get_se_resnet50_backbone, \
-    get_xse_resnext50_backbone, \
+from models.convolutional.architectures.resnet import get_resnet50_backbone
+from models.convolutional.architectures.resnext import get_resnext50_backbone
+from models.convolutional.architectures.resnet_with_attention import get_ge_resnet50_backbone, \
+    get_se_resnet50_backbone, get_xse_resnext50_backbone, \
     get_xse_resnet50_backbone, get_xge_resnet50_backbone, get_xge_resnext50_backbone, get_nl_resnet50_backbone, \
     get_xnl_resnet50_backbone, get_gc_resnet50_backbone, get_xgc_resnet50_backbone
-from models.architectures.xresnet import get_x_resnet50_backbone, get_x_resnext50_backbone
+from models.convolutional.architectures.xresnet import get_x_resnet50_backbone, get_x_resnext50_backbone
 from models.base_classes import ClassificationHeadBuilder, ClassificationModel
 
 

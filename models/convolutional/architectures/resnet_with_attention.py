@@ -1,12 +1,13 @@
-from models.attention.global_context import ResGCBlockBuilder
-from models.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
+from models.convolutional.attention.global_context import ResGCBlockBuilder
+from models.convolutional.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
     ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
-from models.architectures.xresnet import XResNetInitialConvBlockBuilder, XResNeXtBlockBuilderB, \
+from models.convolutional.architectures.xresnet import XResNetInitialConvBlockBuilder, XResNeXtBlockBuilderB, \
     XResNetDProjectionBlock, XResNetDBottleneckBlock
-from models.attention.base import BlockWithPostAttentionBuilder
-from models.attention.gather_excite import GEBlockBuilder
-from models.attention.non_local_network import ResNonLocalBlockBuilder, AttentionInSpecifiedResNetLocations
-from models.attention.squeeze_excite import SEBlockBuilder
+from models.convolutional.attention.base import BlockWithPostAttentionBuilder
+from models.convolutional.attention.gather_excite import GEBlockBuilder
+from models.convolutional.attention.non_local_network import ResNonLocalBlockBuilder, \
+    AttentionInSpecifiedResNetLocations
+from models.convolutional.attention.squeeze_excite import SEBlockBuilder
 
 
 def get_se_resnet50_backbone(nf):

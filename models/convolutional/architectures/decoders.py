@@ -3,9 +3,9 @@ from typing import List
 import tensorflow as tf
 from tensorflow.keras import Model
 
-from models.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetProjectionDownBlockBuilder, \
+from models.convolutional.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetProjectionDownBlockBuilder, \
     ResNetIdentityBlockBuilder, ConvBnBuilder
-from models.architectures.xresnet import XResNetDBottleneckBlock, XResNetDProjectionBlock
+from models.convolutional.architectures.xresnet import XResNetDBottleneckBlock, XResNetDProjectionBlock
 from models.base_classes import ModelBuilder, ReLUBuilder, UpsampleBilinear, ConcatBlockBuilder
 
 
@@ -86,7 +86,6 @@ class FinalConvBlockBuilder2(ModelBuilder):
             self.activation_block_builder.build(),
             tf.keras.layers.Conv2D(output_filters, 3, 1, 'same')  # TODO final pure conv (without BN)
         ], **kwargs)
-
 
 
 class DecoderWithShortcutsBuilder(ModelBuilder):

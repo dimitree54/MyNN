@@ -3,7 +3,7 @@ from typing import List
 import tensorflow as tf
 from tensorflow.python.keras import Model, Sequential
 
-from models.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
+from models.convolutional.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
     ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder, ConvBnBuilder
 from models.base_classes import ModelBuilder, SumBlockBuilder
 

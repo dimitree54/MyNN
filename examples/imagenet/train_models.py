@@ -1,8 +1,8 @@
 import os
 
-from datasets.imagenet import get_data
+from datasets.images.classification.imagenet import get_data
 from examples.imagenet.template import train
-from models.architectures.resnet import get_resnet50_backbone, get_resnet18_backbone, \
+from models.convolutional.architectures.resnet import get_resnet50_backbone, \
     get_resnet18_with_bottleneck_backbone
 from models.base_classes import ClassificationHeadBuilder, ClassificationModel
 

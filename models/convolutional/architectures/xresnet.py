@@ -1,6 +1,6 @@
-from models.architectures.resnet import ConvBnBuilder, ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
-    ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
-from models.architectures.resnext import ResNeXtBlockBuilderB
+from models.convolutional.architectures.resnet import ConvBnBuilder, ResNetBottleNeckBlockBuilder, \
+    ResNetBackboneBuilder, ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
+from models.convolutional.architectures.resnext import ResNeXtBlockBuilderB
 from models.base_classes import ModelBuilder, ReLUBuilder, MaxPoolBuilder
 
 import tensorflow as tf

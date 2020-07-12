@@ -6,8 +6,8 @@ But using 5 blocks (2 in res3 and 3 in res4) works fine.
 """
 from typing import Tuple, List
 
-from models.architectures.resnet import ResNetIdentityBlockBuilder
-from models.attention.base import BlockWithPostAttentionBuilder
+from models.convolutional.architectures.resnet import ResNetIdentityBlockBuilder
+from models.convolutional.attention.base import BlockWithPostAttentionBuilder
 from models.base_classes import ModelBuilder, MaxPoolBuilder, SoftmaxBuilder, \
     SumBlockBuilder, IdentityBlockBuilder
 

@@ -7,7 +7,7 @@ Implemented only final GC block, but not generalized global context framework.
 import tensorflow as tf
 from tensorflow.keras import Model
 
-from models.attention.non_local_network import ResNonLocalBlockBuilder, Conv1x1Builder
+from models.convolutional.attention.non_local_network import ResNonLocalBlockBuilder, Conv1x1Builder
 from models.base_classes import ModelBuilder, SumBlockBuilder, IdentityBlockBuilder, SoftmaxBuilder, ReLUBuilder, \
     LayerNormBuilder
 
@@ -40,7 +40,7 @@ class GCBlock(Model):
         keys = self.keys_conv(inputs)  # shape [BS, H, W, 1]
         keys = self.keys_activation_block(keys)  # shape [BS, H, W, 1]  # TODO We make softmax on 1-channel tensor? Seems wrong. Reshape at first.
         keys = tf.reshape(keys, [-1, inputs_shape[1]*inputs_shape[2], 1])  # shape [BS, HxW, 1]
-        keys = tf.transpose(keys, perm=[0,2,1])  # shape [BS, 1, HxW]
+        keys = tf.transpose(keys, perm=[0, 2, 1])  # shape [BS, 1, HxW]
         values = inputs  # shape [BS, H, W, C]
         values = tf.reshape(values, [-1, inputs_shape[1]*inputs_shape[2], inputs_shape[-1]])  # shape [BS, HxW, C]
 

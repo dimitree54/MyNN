@@ -3,11 +3,11 @@ import os
 import tensorflow as tf
 from tqdm import tqdm
 
-from datasets.imagenette import get_data_raw, val_preprocess, restore, resize_crop_augmentation, \
+from datasets.images.classification.imagenette import get_data_raw, val_preprocess, restore, resize_crop_augmentation, \
     parametrized_augmentation_transform, parametrized_extra_augmentation_transform, preprocess, SHUFFLE_BUFFER_SIZE
 from misc.callbacks import add_warm_up_to_lr
-from models.architectures.decoders import get_x_resnet50_decoder
-from models.architectures.xresnet import get_x_resnet50_backbone
+from models.convolutional.architectures.decoders import get_x_resnet50_decoder
+from models.convolutional.architectures.xresnet import get_x_resnet50_backbone
 from models.base_classes import ClassificationHeadBuilder
 
 

@@ -1,0 +1,5 @@
+tensorflow~=2.2.0
+tensorflow-datasets
+numpy~=1.17.2
+tqdm~=4.35.0
+matplotlib

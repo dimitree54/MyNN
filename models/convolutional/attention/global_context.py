@@ -9,7 +9,7 @@ So in some of my models I use linear activation instead of softmax, so be carefu
 import tensorflow as tf
 from tensorflow.keras import Model
 
-from models.attention.non_local_network import ResNonLocalBlockBuilder, Conv1x1Builder
+from models.convolutional.attention.non_local_network import ResNonLocalBlockBuilder, Conv1x1Builder
 from models.base_classes import ModelBuilder, SumBlockBuilder, IdentityBlockBuilder, SoftmaxBuilder, ReLUBuilder, \
     LayerNormBuilder
 

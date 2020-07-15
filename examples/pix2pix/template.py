@@ -3,10 +3,10 @@ import os
 import tensorflow as tf
 from tqdm import tqdm
 
-from datasets.imagenette import get_data, restore, get_data_raw, val_preprocess, resize_crop_augmentation, \
-    parametrized_augmentation_transform, preprocess
-from models.architectures.decoders import get_resnet18_decoder, get_resnet18_decoder_transposed
-from models.architectures.resnet import get_resnet18_with_bottleneck_backbone
+from datasets.images.classification.imagenette import restore, get_data_raw, val_preprocess, \
+    resize_crop_augmentation, parametrized_augmentation_transform, preprocess
+from models.convolutional.architectures.decoders import get_resnet18_decoder_transposed
+from models.convolutional.architectures.resnet import get_resnet18_with_bottleneck_backbone
 from models.base_classes import GeneratorModel
 
 

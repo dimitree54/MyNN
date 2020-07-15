@@ -2,20 +2,19 @@ import tensorflow_datasets
 import tensorflow as tf
 import numpy as np
 
-from data.augmantations import random_crop_and_resize
-from datasets.augmentations import add_gaussian_noise
+from data.augmantations import resize_by_shorter_size, random_crop_and_resize
+from datasets.images.augmentations import add_gaussian_noise
 
-IMG_SIZE = 128
+IMG_SIZE = 224
 SHUFFLE_BUFFER_SIZE = 1000
 IMAGENET_MEAN_RGB = [123.68, 116.779, 103.939]
 IMAGENET_DEV_RGB = [58.293, 57.12, 57.375]
-# WARNING it seems that this validation set differs from original imagenette validation.
 
 
 def train_preprocess(sample):
     image = sample['image']
     label = sample['label']
-    label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
+    label = tf.one_hot(label, 1000, 1, 0, -1, tf.float32)
     image = resize_crop_augmentation(image)
     image = augmentation_transform(image)
     image = preprocess(image)
@@ -25,13 +24,14 @@ def train_preprocess(sample):
 def val_preprocess(sample):
     image = sample['image']
     label = sample['label']
-    label = tf.one_hot(label, 10, 1, 0, -1, tf.float32)
+    label = tf.one_hot(label, 1000, 1, 0, -1, tf.float32)
     image = validation_transform(image)
     image = preprocess(image)
     return image, label
 
 
 def resize_crop_augmentation(image):
+    image = resize_by_shorter_size(image, (256, 480))
     image = random_crop_and_resize(image, (IMG_SIZE, IMG_SIZE), (0.08, 1), (3/4, 4/3))
     return image
 
@@ -59,6 +59,7 @@ def parametrized_extra_augmentation_transform(image, parameter):
 
 
 def validation_transform(image):
+    image = resize_by_shorter_size(image, 256)
     image = tf.image.crop_to_bounding_box(
         image, (tf.shape(image)[0] - IMG_SIZE) // 2, (tf.shape(image)[1] - IMG_SIZE) // 2, IMG_SIZE, IMG_SIZE)
     return image
@@ -79,8 +80,8 @@ def restore(image):
 
 def get_data(batch_size, draw_examples=False):
     # Construct a tf.data.Dataset
-    raw_train, info = tensorflow_datasets.load('imagenette/160px', split='train', with_info=True)  # 12,894
-    raw_validation = tensorflow_datasets.load('imagenette/160px', split='validation')  # 500
+    raw_train, info = tensorflow_datasets.load('imagenet2012', split='train', with_info=True)
+    raw_validation = tensorflow_datasets.load('imagenet2012', split='validation')
 
     train = raw_train.map(train_preprocess)
     validation = raw_validation.map(val_preprocess)
@@ -95,8 +96,8 @@ def get_data(batch_size, draw_examples=False):
 
 def get_data_raw():
     # Construct a tf.data.Dataset
-    raw_train, info = tensorflow_datasets.load('imagenette/160px', split='train', with_info=True)  # 12,894
-    raw_validation = tensorflow_datasets.load('imagenette/160px', split='validation')  # 500
+    raw_train, info = tensorflow_datasets.load('imagenet2012', split='train', with_info=True)
+    raw_validation = tensorflow_datasets.load('imagenet2012', split='validation')
 
     return raw_train, raw_validation
 

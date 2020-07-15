@@ -38,9 +38,9 @@ class GCBlock(Model):
         inputs_shape = inputs.get_shape()
 
         keys = self.keys_conv(inputs)  # shape [BS, H, W, 1]
-        keys = self.keys_activation_block(keys)  # shape [BS, H, W, 1]  # TODO We make softmax on 1-channel tensor? Seems wrong. Reshape at first.
         keys = tf.reshape(keys, [-1, inputs_shape[1]*inputs_shape[2], 1])  # shape [BS, HxW, 1]
-        keys = tf.transpose(keys, perm=[0,2,1])  # shape [BS, 1, HxW]
+        keys = tf.transpose(keys, perm=[0, 2, 1])  # shape [BS, 1, HxW]
+        keys = self.keys_activation_block(keys)  # shape [BS, H, W, 1]
         values = inputs  # shape [BS, H, W, C]
         values = tf.reshape(values, [-1, inputs_shape[1]*inputs_shape[2], inputs_shape[-1]])  # shape [BS, HxW, C]
 

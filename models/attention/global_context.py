@@ -3,6 +3,8 @@ GCNet: Non-local Networks Meet Squeeze-Excitation Networks and Beyond
 https://arxiv.org/pdf/1904.11492.pdf
 2019
 Implemented only final GC block, but not generalized global context framework.
+At first I accidentally was using GC without softmax activation for keys. And that surprisingly showed better results.
+So in some of my models I use linear activation instead of softmax, so be careful.
 """
 import tensorflow as tf
 from tensorflow.keras import Model

@@ -1,4 +1,4 @@
-from models.attention.global_context import ResGCBlockBuilder
+from models.attention.global_context import ResGCBlockBuilder, GCBlockBuilder
 from models.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
     ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
 from models.architectures.xresnet import XResNetInitialConvBlockBuilder, XResNeXtBlockBuilderB, \
@@ -7,6 +7,7 @@ from models.attention.base import BlockWithPostAttentionBuilder
 from models.attention.gather_excite import GEBlockBuilder
 from models.attention.non_local_network import ResNonLocalBlockBuilder, AttentionInSpecifiedResNetLocations
 from models.attention.squeeze_excite import SEBlockBuilder
+from models.base_classes import IdentityBlockBuilder
 
 
 def get_se_resnet50_backbone(nf):
@@ -137,11 +138,18 @@ def get_gc_resnet50_backbone(nf):  # non-local attention
 
 
 def get_xgc_resnet50_backbone(nf):
+    # WARNING, I use linear activation for GC here instead of softmax.
     return ResNetBackboneBuilder(
         init_conv_builder=XResNetInitialConvBlockBuilder(),
         resnet_block_builder=ResNetIdentityBlockBuilder(
             conv_block_builder=BlockWithPostAttentionBuilder(
-                main_block_builder=ResNetBottleNeckBlockBuilder(), attention_block_builder=ResGCBlockBuilder())
+                main_block_builder=ResNetBottleNeckBlockBuilder(),
+                attention_block_builder=ResGCBlockBuilder(
+                    gc_block_builder=GCBlockBuilder(
+                        context_modeling_activation_block_builder=IdentityBlockBuilder()  # linear activation
+                    )
+                )
+            )
         ),
         resnet_down_block_builder=ResNetProjectionDownBlockBuilder(
             conv_block_builder=XResNetDBottleneckBlock(),

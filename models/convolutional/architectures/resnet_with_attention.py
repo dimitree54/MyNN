@@ -1,4 +1,5 @@
-from models.convolutional.attention.global_context import ResGCBlockBuilder
+from models.base_classes import IdentityBlockBuilder
+from models.convolutional.attention.global_context import ResGCBlockBuilder, GCBlockBuilder
 from models.convolutional.architectures.resnet import ResNetBottleNeckBlockBuilder, ResNetBackboneBuilder, \
     ResNetIdentityBlockBuilder, ResNetProjectionDownBlockBuilder
 from models.convolutional.architectures.xresnet import XResNetInitialConvBlockBuilder, XResNeXtBlockBuilderB, \

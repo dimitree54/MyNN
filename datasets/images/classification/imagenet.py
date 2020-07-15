@@ -2,8 +2,7 @@ import tensorflow_datasets
 import tensorflow as tf
 import numpy as np
 
-from data.augmantations import resize_by_shorter_size, random_crop_and_resize
-from datasets.images.augmentations import add_gaussian_noise
+from datasets.images.augmentations import add_gaussian_noise, resize_by_shorter_size, random_crop_and_resize
 
 IMG_SIZE = 224
 SHUFFLE_BUFFER_SIZE = 1000

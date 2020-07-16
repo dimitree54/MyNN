@@ -1,58 +1,63 @@
 import os
-
 import tensorflow as tf
+from tqdm import tqdm
 
-from datasets.vectors.classification.iris import get_data
+default_loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+metrics = {
+    "loss": tf.keras.metrics.Mean(),
+    "model_loss": tf.keras.metrics.Mean(),
+    "total_loss": tf.keras.metrics.Mean(),
+    "accuracy": tf.keras.metrics.SparseCategoricalAccuracy()
+}
 
-name = "baseline"
-NUM_EPOCHS = 201
-BATCH_SIZE = 32
 
-
-def train_step(x, y):
+@tf.function
+def train_step(model: tf.keras.Model, optimizer, loss_object, x, y):
     with tf.GradientTape() as tape:
         pred = model(x, training=True)
         loss_value = loss_object(y, [pred])
+        model_loss = tf.add_n(model.losses)
+        total_loss = loss_value + model_loss
     grads = tape.gradient(loss_value, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
-    loss_metric.update_state(loss_value)
-    accuracy_metric.update_state(y, pred)
+
+    metrics["loss"].update_state(loss_value)
+    metrics["model_loss"].update_state(model_loss)
+    metrics["total_loss"].update_state(total_loss)
+    metrics["accuracy"].update_state(y, pred)
 
 
-def val_step(x, y):
+@tf.function
+def val_step(model, loss_object, x, y):
     pred = model(x, training=False)
     loss_value = loss_object(y, [pred])
-    loss_metric.update_state(loss_value)
-    accuracy_metric.update_state(y, pred)
+    model_loss = tf.add_n(model.losses)
+    total_loss = loss_value + model_loss
+
+    metrics["loss"].update_state(loss_value)
+    metrics["model_loss"].update_state(model_loss)
+    metrics["total_loss"].update_state(total_loss)
+    metrics["accuracy"].update_state(y, pred)
 
 
-model = tf.keras.Sequential([
-    tf.keras.layers.Dense(10, activation=tf.nn.sigmoid, input_shape=(4,)),  # input shape required
-    tf.keras.layers.Dense(10, activation=tf.nn.sigmoid),
-    tf.keras.layers.Dense(3)
-])
-loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
-loss_metric = tf.keras.metrics.Mean()
-accuracy_metric = tf.keras.metrics.SparseCategoricalAccuracy()
-train_summary_writer = tf.summary.create_file_writer(os.path.join(name, "train"))
-val_summary_writer = tf.summary.create_file_writer(os.path.join(name, "val"))
+def train(model: tf.keras.Model, name, train_batches, validation_batches, epochs=120, base_lr=0.01,
+          loss_object=default_loss_object):
+    optimizer = tf.keras.optimizers.SGD(learning_rate=base_lr)
 
-train_data, val_data = get_data(BATCH_SIZE)
+    train_summary_writer = tf.summary.create_file_writer(os.path.join(name, "train"))
+    val_summary_writer = tf.summary.create_file_writer(os.path.join(name, "val"))
 
-for epoch in range(NUM_EPOCHS):
-    for batch in train_data:
-        train_step(batch['features'], batch['label'])
-    with train_summary_writer.as_default():
-        tf.summary.scalar("loss", loss_metric.result(), epoch)
-        tf.summary.scalar("accuracy", accuracy_metric.result(), epoch)
-    loss_metric.reset_states()
-    accuracy_metric.reset_states()
+    for epoch in tqdm(range(epochs)):
+        for batch in train_batches:
+            train_step(model, optimizer, loss_object, batch['features'], batch['label'])
+        with train_summary_writer.as_default():
+            for metric_name in metrics:
+                tf.summary.scalar(metric_name, metrics[metric_name].result(), epoch)
+                metrics[metric_name].reset_states()
 
-    for batch in val_data:
-        train_step(batch['features'], batch['label'])
-    with val_summary_writer.as_default():
-        tf.summary.scalar("loss", loss_metric.result(), epoch)
-        tf.summary.scalar("accuracy", accuracy_metric.result(), epoch)
-    loss_metric.reset_states()
-    accuracy_metric.reset_states()
+        for batch in validation_batches:
+            val_step(model, loss_object, batch['features'], batch['label'])
+        with val_summary_writer.as_default():
+            for metric_name in metrics:
+                tf.summary.scalar(metric_name, metrics[metric_name].result(), epoch)
+                metrics[metric_name].reset_states()

@@ -16,7 +16,10 @@ def train_step(model: tf.keras.Model, optimizer, loss_object, x, y):
     with tf.GradientTape() as tape:
         pred = model(x, training=True)
         loss_value = loss_object(y, [pred])
-        model_loss = tf.add_n(model.losses)
+        if len(model.losses) == 0:
+            model_loss = 0
+        else:
+            model_loss = tf.add_n(model.losses)
         total_loss = loss_value + model_loss
     grads = tape.gradient(loss_value, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -31,7 +34,10 @@ def train_step(model: tf.keras.Model, optimizer, loss_object, x, y):
 def val_step(model, loss_object, x, y):
     pred = model(x, training=False)
     loss_value = loss_object(y, [pred])
-    model_loss = tf.add_n(model.losses)
+    if len(model.losses) == 0:
+        model_loss = 0
+    else:
+        model_loss = tf.add_n(model.losses)
     total_loss = loss_value + model_loss
 
     metrics["loss"].update_state(loss_value)

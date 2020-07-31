@@ -1,9 +1,10 @@
 import tensorflow as tf
 from datasets.vectors.classification.iris import get_data
-from examples.fully_connected.template import train
-from tensorflow.keras import regularizers
+from examples.fully_connected.template import train, fake_loss_object
 
-from models.fully_connected.local import LocalFCLayer, calc_local_loss_v1, calc_local_loss_v2, calc_local_loss_v3
+from models.fully_connected.local import LocalFCLayer, calc_local_loss_v1, \
+    LocalFCLayerWithExternalOutput, FCWithActivatedWeights, build_backward_local_loss, \
+    build_combined_local_loss, calc_local_activity_normalization_loss, calc_local_loss_v4
 
 
 def train_small_fc_relu():
@@ -26,73 +27,94 @@ def train_small_fc_tanh():
     model = tf.keras.Sequential([
         tf.keras.layers.Dense(10, activation=tf.nn.tanh, input_shape=(4,)),  # input shape required
         tf.keras.layers.Dense(10, activation=tf.nn.tanh),
-        tf.keras.layers.Dense(3)
+        tf.keras.layers.Dense(3, activation=tf.nn.tanh)
     ])
     train_data, val_data = get_data(batch_size)
     train(model, name, train_data, val_data, num_epochs, 0.01)
 
 
-def train_small_fc_relu_reg():
-    name = "small_fc_relu_reg"
+def train_small_fc_tanh_activated_kernel():
+    name = "small_fc_tanh_activated_kernel"
     num_epochs = 201
     batch_size = 32
     model = tf.keras.Sequential([
-        tf.keras.layers.Dense(10, activation=tf.nn.relu, input_shape=(4,), kernel_regularizer=regularizers.l2(0.01)),
-        tf.keras.layers.Dense(10, activation=tf.nn.relu, kernel_regularizer=regularizers.l2(0.01)),
-        tf.keras.layers.Dense(3)
+        FCWithActivatedWeights(10, kernel_activation=tf.nn.tanh, activation=tf.nn.tanh,
+                               input_shape=(4,)),  # input shape required
+        FCWithActivatedWeights(10, kernel_activation=tf.nn.tanh, activation=tf.nn.tanh),
+        FCWithActivatedWeights(3, kernel_activation=tf.nn.tanh, activation=tf.nn.tanh)
     ])
     train_data, val_data = get_data(batch_size)
     train(model, name, train_data, val_data, num_epochs, 0.01)
 
 
-def train_small_fc_local_v1():
-    name = "small_fc_local_v1"
+def train_small_fc_sigmoid_activated_kernel():
+    name = "small_fc_sigmoid_activated_kernel"
     num_epochs = 201
     batch_size = 32
     model = tf.keras.Sequential([
-        LocalFCLayer(10, kernel_activation=tf.keras.activations.tanh, local_loss_fn=calc_local_loss_v1,
-                     activation=tf.keras.activations.tanh, input_shape=(4,)),
-        LocalFCLayer(10, kernel_activation=tf.keras.activations.tanh, local_loss_fn=calc_local_loss_v1,
-                     activation=tf.keras.activations.tanh),
-        tf.keras.layers.Dense(3)
+        FCWithActivatedWeights(10, kernel_activation=tf.nn.sigmoid, activation=tf.nn.sigmoid,
+                               input_shape=(4,)),  # input shape required
+        FCWithActivatedWeights(10, kernel_activation=tf.nn.sigmoid, activation=tf.nn.sigmoid),
+        FCWithActivatedWeights(3, kernel_activation=tf.nn.sigmoid, activation=tf.nn.sigmoid)
     ])
     train_data, val_data = get_data(batch_size)
     train(model, name, train_data, val_data, num_epochs, 0.01)
 
 
-def train_small_fc_local_v2():
-    name = "small_fc_local_v2"
+def train_small_fc_tanh_activated_kernel_local_start():
+    name = "small_fc_tanh_activated_kernel_local_start"
     num_epochs = 201
     batch_size = 32
     model = tf.keras.Sequential([
-        LocalFCLayer(10, kernel_activation=tf.keras.activations.tanh, local_loss_fn=calc_local_loss_v2,
-                     activation=tf.keras.activations.tanh, input_shape=(4,)),
-        LocalFCLayer(10, kernel_activation=tf.keras.activations.tanh, local_loss_fn=calc_local_loss_v2,
-                     activation=tf.keras.activations.tanh),
-        tf.keras.layers.Dense(3)
+        LocalFCLayer(10, kernel_activation=tf.nn.tanh, local_loss_fn=calc_local_loss_v1,
+                     activation=tf.nn.tanh, input_shape=(4,)),
+        LocalFCLayer(10, kernel_activation=tf.nn.tanh, local_loss_fn=calc_local_loss_v1,
+                     activation=tf.nn.tanh),
+        FCWithActivatedWeights(3, kernel_activation=tf.nn.tanh, activation=tf.nn.tanh)
     ])
     train_data, val_data = get_data(batch_size)
     train(model, name, train_data, val_data, num_epochs, 0.01)
 
 
-def train_small_fc_local_v3():
-    name = "small_fc_local_v3"
+def train_small_fc_tanh_activated_kernel_local_end():
+    name = "small_fc_tanh_activated_kernel_local_end_v4_bidirectional"
+    num_epochs = 2010
+    batch_size = 32
+    model = tf.keras.Sequential([
+        FCWithActivatedWeights(10, kernel_activation=tf.nn.tanh,
+                               activation=tf.nn.tanh, input_shape=(4,)),
+        LocalFCLayer(10, kernel_activation=tf.nn.tanh,
+                     local_loss_fn=build_combined_local_loss([
+                         calc_local_activity_normalization_loss
+                     ]),
+                     activation=tf.nn.tanh),
+        LocalFCLayerWithExternalOutput(3, kernel_activation=tf.nn.tanh,
+                                       local_loss_fn=build_combined_local_loss([
+                                           calc_local_loss_v4,
+                                           build_backward_local_loss(calc_local_loss_v4),
+                                           # calc_local_activity_normalization_loss
+                                       ]),
+                                       activation=tf.nn.tanh),
+    ])
+    train_data, val_data = get_data(batch_size)  # TODO    V    reduced lr for debug
+    train(model, name, train_data, val_data, num_epochs, 0.001, loss_object=fake_loss_object)
+
+
+def train_small_fc_tanh_activated_kernel_fully_local():
+    name = "small_fc_tanh_activated_kernel_fully_local"
     num_epochs = 201
     batch_size = 32
     model = tf.keras.Sequential([
-        LocalFCLayer(10, kernel_activation=tf.keras.activations.tanh, local_loss_fn=calc_local_loss_v3,
-                     activation=tf.keras.activations.tanh, input_shape=(4,)),
-        LocalFCLayer(10, kernel_activation=tf.keras.activations.tanh, local_loss_fn=calc_local_loss_v3,
-                     activation=tf.keras.activations.tanh),
-        tf.keras.layers.Dense(3)
+        LocalFCLayer(10, kernel_activation=tf.nn.tanh, local_loss_fn=calc_local_loss_v1,
+                     activation=tf.nn.tanh, input_shape=(4,)),
+        LocalFCLayer(10, kernel_activation=tf.nn.tanh, local_loss_fn=calc_local_loss_v1,
+                     activation=tf.nn.tanh),
+        LocalFCLayerWithExternalOutput(3, kernel_activation=tf.nn.tanh,
+                                       local_loss_fn=None,  # TODO choose loss
+                                       activation=tf.nn.tanh),
     ])
     train_data, val_data = get_data(batch_size)
-    train(model, name, train_data, val_data, num_epochs, 0.01)
+    train(model, name, train_data, val_data, num_epochs, 0.01, loss_object=fake_loss_object)
 
 
-train_small_fc_relu_reg()
-train_small_fc_tanh()
-train_small_fc_relu()
-train_small_fc_local_v1()
-train_small_fc_local_v2()
-train_small_fc_local_v3()
+train_small_fc_tanh_activated_kernel_local_end()

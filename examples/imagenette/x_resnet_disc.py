@@ -201,4 +201,4 @@ if __name__ == "__main__":
     train(epochs=200)
     # TODO export (not only classifier backbone, but all models)
     # TODO we are trying to repeat normal classification for class_backbone + head, and applying modifications only to
-    #  discriminator, but somehow validation accuracy not stable (compared to classical setting). where the difference
+    #  discriminator, but somehow validation accuracy not stable (compared to classical setting). where the difference?

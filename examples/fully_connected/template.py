@@ -8,7 +8,7 @@ default_loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=
 
 
 def fake_loss_object(true, pred):  # noqa
-    return 0  # tf.constant(0, dtype=tf.float32)  # TODO remove if simple 0 works
+    return 0
 
 
 metrics = {
@@ -21,9 +21,9 @@ metrics = {
 
 
 @tf.function
-def train_step(model: tf.keras.Model, optimizer, loss_object, x, y):
+def train_step(model: tf.keras.Model, optimizer, loss_object, x, y, num_classes):
     if isinstance(model.layers[-1], LocalFCLayerWithExternalOutput):
-        one_hot_y = tf.one_hot(y, 3, 1, 0, dtype=tf.float32)  # TODO remove hardcode
+        one_hot_y = tf.one_hot(y, num_classes, 1, 0, dtype=tf.float32)
         model.layers[-1].set_output(one_hot_y)
     with tf.GradientTape() as tape:
         pred = model(x, training=True)
@@ -45,9 +45,6 @@ def train_step(model: tf.keras.Model, optimizer, loss_object, x, y):
 
 @tf.function
 def val_step(model, loss_object, x, y):
-    if isinstance(model.layers[-1], LocalFCLayerWithExternalOutput):
-        one_hot_y = tf.one_hot(y, 3, 1, 0, dtype=tf.float32)  # TODO remove hardcode
-        model.layers[-1].set_output(one_hot_y)
     pred = model(x, training=False)
     loss_value = loss_object(y, [pred])
     if len(model.losses) == 0:
@@ -63,16 +60,18 @@ def val_step(model, loss_object, x, y):
     metrics["mean_output_activation"].update_state(tf.reduce_mean(tf.abs(pred)))
 
 
-def train(model: tf.keras.Model, name, train_batches, validation_batches, epochs=120, base_lr=0.01,
+def train(model: tf.keras.Model, name, train_batches, validation_batches, epochs, base_lr,
           loss_object=default_loss_object):
     optimizer = tf.keras.optimizers.SGD(learning_rate=base_lr)
 
     train_summary_writer = tf.summary.create_file_writer(os.path.join(name, "train"))
     val_summary_writer = tf.summary.create_file_writer(os.path.join(name, "val"))
 
+    num_classes = model.output_shape[-1]
+
     for epoch in tqdm(range(epochs)):
         for batch in train_batches:
-            train_step(model, optimizer, loss_object, batch['features'], batch['label'])
+            train_step(model, optimizer, loss_object, batch['features'], batch['label'], num_classes)
         with train_summary_writer.as_default():
             for metric_name in metrics:
                 tf.summary.scalar(metric_name, metrics[metric_name].result(), epoch)

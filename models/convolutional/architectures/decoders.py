@@ -84,7 +84,7 @@ class FinalConvBlockBuilder2(ModelBuilder):
             self.activation_block_builder.build(),
             self.upsampling_block_builder.build(filters=filters, kernel_size=self.kernel_size, stride=self.stride),
             self.activation_block_builder.build(),
-            tf.keras.layers.Conv2D(output_filters, 3, 1, 'same')  # TODO final pure conv (without BN)
+            tf.keras.layers.Conv2D(output_filters, 3, 1, 'same')  # final pure conv (without BN)
         ], **kwargs)
 
 

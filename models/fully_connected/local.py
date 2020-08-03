@@ -5,14 +5,15 @@ def no_local_loss(activated_weights, inputs, activated_outputs):  # noqa
     return 0
 
 
-def calc_local_activity_normalization_loss(activated_weights, inputs, activated_outputs):  # noqa
-    # this normalization loss works with activated_outputs in range [-1, 1] (after tanh activation)
-    normal_activity_rate = 0.3  # TODO hardcode. Make builder for normalization loss
-    normal_activity = activated_outputs.shape[-1] * normal_activity_rate
-    normal_activity = tf.expand_dims(normal_activity, 0)  # adding batch dimension
-    activity_normalization_loss = tf.square(tf.reduce_sum(tf.abs(activated_outputs), axis=-1) - normal_activity)
-    activity_normalization_loss = tf.reduce_mean(activity_normalization_loss)
-    return activity_normalization_loss * 10
+def build_local_activity_normalization_loss(normal_activity_rate=0.3):
+    def calc_local_activity_normalization_loss(activated_weights, inputs, activated_outputs):  # noqa
+        # this normalization loss works with activated_outputs in range [-1, 1] (after tanh activation)
+        normal_activity = activated_outputs.shape[-1] * normal_activity_rate
+        normal_activity = tf.expand_dims(normal_activity, 0)  # adding batch dimension
+        activity_normalization_loss = tf.square(tf.reduce_sum(tf.abs(activated_outputs), axis=-1) - normal_activity)
+        activity_normalization_loss = tf.reduce_mean(activity_normalization_loss)
+        return activity_normalization_loss * 10
+    return calc_local_activity_normalization_loss
 
 
 def calc_local_loss_v1(activated_weights, inputs, activated_outputs):
@@ -61,7 +62,6 @@ def calc_local_loss_v4(activated_weights, inputs, activated_outputs):
     match = tf.matmul(inputs, activated_weights)  # [bs, m]
     max_possible_match = tf.expand_dims(tf.reduce_sum(tf.abs(activated_weights), axis=0) + 0.0001, axis=0)  # [1, m]
     normalized_match = match / max_possible_match  # [bs, m]
-    # TODO again weights in denominator (undesirable regularization)
     local_loss = tf.keras.losses.mean_squared_error(activated_outputs, normalized_match)  # [bs, m]
     # local_loss = tf.keras.losses.binary_crossentropy(activated_outputs, normalized_match)  # [bs, m]
     local_loss = tf.reduce_sum(local_loss)  # []
@@ -103,36 +103,42 @@ class FCWithActivatedWeights(tf.keras.layers.Dense):
 
     def call(self, inputs):
         temp = self.kernel
-        self.activate_kernel()  # TODO making such hack because otherwise kernel becomes not eager.
+        self.activate_kernel()  # making hack with temp because otherwise kernel becomes not eager.
         output = super().call(inputs)
         self.kernel = temp
         return output
 
 
 class LocalFCLayer(FCWithActivatedWeights):
-    def __init__(self, units, local_loss_fn=None, **kwargs):
+    def __init__(self, units, local_loss_fn=None, stop_input_gradients=False, **kwargs):
         self.local_loss_fn = local_loss_fn
+        self.stop_input_gradients = stop_input_gradients
         super().__init__(units, **kwargs)
 
     def call(self, inputs):
+        if self.stop_input_gradients:
+            inputs = tf.stop_gradient(inputs)
         activated_outputs = super().call(inputs)
-        self.add_loss(self.local_loss_fn(self.kernel, inputs, activated_outputs), inputs=True)
+        if self.local_loss_fn is not None:
+            self.add_loss(self.local_loss_fn(self.kernel, inputs, activated_outputs), inputs=True)
         return activated_outputs
 
 
-class LocalFCLayerWithExternalOutput(FCWithActivatedWeights):
-    def __init__(self, units, local_loss_fn=None, **kwargs):
-        self.local_loss_fn = local_loss_fn
+class LocalFCLayerWithExternalOutput(LocalFCLayer):
+    def __init__(self, units, **kwargs):
         self.external_output = None
         super().__init__(units, **kwargs)
 
     def call(self, inputs):
-        activated_outputs = super().call(inputs)
+        temp = self.local_loss_fn
+        self.local_loss_fn = None
+        activated_outputs = super().call(inputs)  # skipping local loss in parents call
+        self.local_loss_fn = temp
         if self.external_output is None:
+            print("Warning no external output, so internal will be used")
             self.external_output = activated_outputs
-        else:
-            print("ok")
-        self.add_loss(self.local_loss_fn(self.kernel, inputs, self.external_output), inputs=True)
+        if self.local_loss_fn is not None:
+            self.add_loss(self.local_loss_fn(self.kernel, inputs, self.external_output), inputs=True)
         self.external_output = None
         return activated_outputs
 

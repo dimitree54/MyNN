@@ -76,6 +76,9 @@ class ResNetProjectionDownBlockBuilder(ModelBuilder):
             x = self.activation_block(x, training=training, mask=mask)
             return x
 
+        def get_config(self):
+            return {}  # TODO what to do here?
+
     def build(self, filters, stride, **kwargs) -> Model:
         return self.ResNetIdentityBlock(
             resnet_block=self.conv_block_builder.build(filters=filters, stride=stride),
@@ -141,6 +144,9 @@ class ResNetBackboneBuilder(ModelBuilder):
                 return endpoints
             else:
                 return endpoints[-1]
+
+        def get_config(self):
+            return {}  # TODO what to do here?
 
     def build(self, filters, num_repeats: List[int], return_endpoints_on_call=False, **kwargs) -> Model:
         blocks_sequence = [

@@ -75,6 +75,9 @@ class NonLocalBlock(Model):
 
         return result
 
+    def get_config(self):
+        return {}  # TODO what to do here?
+
 
 class NonLocalBlockBuilder(ModelBuilder):
     bottleneck_rate = 2

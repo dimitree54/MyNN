@@ -45,6 +45,9 @@ class GEBlockThetaPlus(Model):
         result = inputs * channels_attention
         return result
 
+    def get_config(self):
+        return {}  # TODO what to do here?
+
 
 class GEBlockBuilder(ModelBuilder):
     def __init__(self,

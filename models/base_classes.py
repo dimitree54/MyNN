@@ -83,6 +83,9 @@ class UpsampleBilinear(ModelBuilder):
         def call(self, inputs, training=None, mask=None):
             return self.resize_layer(inputs)
 
+        def get_config(self):
+            return {"resize_rate": self.resize_rate}
+
     def build(self, stride=2, **kwargs) -> Model:
         return UpsampleBilinear.ResizeModel(resize_rate=stride)
 
@@ -103,6 +106,9 @@ class SumBlockBuilder(ModelBuilder):
         def call(self, inputs, training=None, mask=None):
             return self.add_layer(inputs)
 
+        def get_config(self):
+            return {}
+
     def build(self, **kwargs) -> Model:
         return SumBlockBuilder.AddModel(**kwargs)
 
@@ -122,6 +128,9 @@ class ConcatBlockBuilder(ModelBuilder):
 
         def call(self, inputs, training=None, mask=None):
             return self.concat_layer(inputs)
+
+        def get_config(self):
+            return {}
 
     def build(self, **kwargs) -> Model:
         return ConcatBlockBuilder.ConcatModel(**kwargs)
@@ -146,6 +155,9 @@ class ClassificationModel(Model):
         x = self.head(x, training=training, mask=mask)
         return x
 
+    def get_config(self):
+        return {}  # TODO what to do here?
+
 
 class GeneratorModel(Model):
     def __init__(self, encoder: Model, decoder: Model, **kwargs):
@@ -157,3 +169,6 @@ class GeneratorModel(Model):
         endpoints = self.encoder(inputs, training=training, mask=mask)
         x = self.decoder(endpoints, training=training, mask=mask)
         return x
+
+    def get_config(self):
+        return {}  # TODO what to do here?

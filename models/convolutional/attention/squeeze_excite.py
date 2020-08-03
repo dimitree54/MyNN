@@ -39,6 +39,9 @@ class SEBlock(Model):
         result = inputs * channels_attention
         return result
 
+    def get_config(self):
+        return {}  # TODO what to do here?
+
 
 class SEBlockBuilder(ModelBuilder):
     bottleneck_rate = 16

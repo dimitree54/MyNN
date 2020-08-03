@@ -6,7 +6,7 @@ from models.fully_connected.local import LocalFCLayer, LocalFCLayerWithExternalO
     build_backward_local_loss, build_combined_local_loss, calc_local_loss_v4, calc_local_loss_v3, calc_local_loss_v2, \
     calc_local_loss_v1
 
-num_epochs = 201
+num_epochs = 100
 batch_size = 32
 lr = 0.01
 

@@ -116,6 +116,9 @@ class DecoderWithShortcutsBuilder(ModelBuilder):
                     x = layer(x, training=training, mask=mask)
             return x
 
+        def get_config(self):
+            return {}  # TODO what to do here?
+
     def build(self, filters, num_repeats: List[int], output_filters, **kwargs) -> Model:
         filters = filters * pow(2, len(num_repeats) + 1)
 

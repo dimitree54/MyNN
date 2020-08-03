@@ -55,6 +55,9 @@ class GCBlock(Model):
 
         return result
 
+    def get_config(self):
+        return {}  # TODO what to do here?
+
 
 class GCBlockBuilder(ModelBuilder):
     bottleneck_rate = 16

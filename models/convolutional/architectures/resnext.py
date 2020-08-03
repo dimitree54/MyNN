@@ -33,6 +33,9 @@ class ResNeXtBlockBuilderA(ModelBuilder):
             x = self.branches_aggregation(x, training=training, mask=mask)
             return x
 
+        def get_config(self):
+            return {}  # TODO what to do here?
+
     def build(self, filters, stride=1, **kwargs) -> Model:
         # for layer with 256 input filters we have base_bottleneck_filters as bottleneck size and we increase it
         # this bottleneck size proportionally to input filters.
@@ -64,6 +67,9 @@ class ResNeXtBlockBuilderB(ModelBuilder):
             x = self.branches_aggregation(x)
             x = self.final_conv(x, training=training, mask=mask)
             return x
+
+        def get_config(self):
+            return {}  # TODO what to do here?
 
     def build_branch(self, bottleneck_filters, stride, **kwargs) -> Model:
         return Sequential([

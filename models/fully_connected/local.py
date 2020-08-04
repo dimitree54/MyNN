@@ -128,8 +128,11 @@ class LocalFCLayerWithExternalOutput(LocalFCLayer):
     def __init__(self, units, **kwargs):
         self.external_output = None
         super().__init__(units, **kwargs)
+        # TODO output bias do not have gradients
 
     def call(self, inputs):
+        if self.stop_input_gradients:
+            inputs = tf.stop_gradient(inputs)  # stopping again specially for local_loss_fn
         temp = self.local_loss_fn
         self.local_loss_fn = None
         activated_outputs = super().call(inputs)  # skipping local loss in parents call

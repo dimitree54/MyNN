@@ -1,7 +1,7 @@
 """
 https://www.tensorflow.org/datasets/catalog/higgs
 This is one-class classification problem to discriminate "tau tau decay of a Higgs boson" event with background.
-Data has 11 000 000 entries
+Data has 11 000 000 entries, inputs has 28 features (mainly float), 21 low-level and 7 high-level.
 Baseline network is 5-layer network with 300 neurons per layer with tanh activation
 """
 import tensorflow_datasets
